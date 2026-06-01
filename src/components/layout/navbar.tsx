@@ -1,18 +1,14 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
-
-const navItems = [
-  { label: "Foundation", href: "#brand-foundation" },
-  { label: "Structure", href: "#structure" },
-];
+import { navItems, siteConfig } from "@/lib/site";
 
 export function Navbar() {
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-background/82 backdrop-blur-xl">
       <Container className="flex h-20 items-center justify-between">
         <Link href="/" className="font-serif text-2xl font-semibold text-charcoal">
-          LA ESPERANZA
+          {siteConfig.name}
         </Link>
 
         <nav aria-label="Primary navigation" className="hidden items-center gap-8 md:flex">

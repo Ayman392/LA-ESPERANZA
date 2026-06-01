@@ -1,6 +1,6 @@
 # LA ESPERANZA
 
-Next.js, TypeScript, and Tailwind CSS foundation for the LA ESPERANZA perfume ecommerce brand.
+Professional Next.js, TypeScript, and Tailwind CSS foundation for the LA ESPERANZA perfume ecommerce brand.
 
 ## Scripts
 
@@ -23,7 +23,12 @@ src/
     layout/
     shared/
     ui/
+  hooks/
   lib/
+  services/
+  supabase/
+  types/
+docs/
 ```
 
-This starter intentionally includes brand architecture, reusable components, a soft grey theme, navbar, footer, and homepage skeleton only. Ecommerce features are left for a later build phase.
+This starter intentionally includes brand architecture, reusable components, a soft grey `#FCF8F8` theme, navbar, footer, and homepage skeleton only. Ecommerce features are left for a later build phase.

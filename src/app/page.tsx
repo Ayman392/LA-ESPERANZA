@@ -1,10 +1,12 @@
 import { ArrowRight, FlaskConical, Leaf, Sparkles } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Container } from "@/components/layout/container";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { SectionHeading } from "@/components/shared/section-heading";
+import flameBottle from "../../product pic/flame.png";
 
 const brandPillars = [
   {
@@ -32,7 +34,7 @@ export default function Home() {
       <section className="relative">
         <Container className="grid min-h-[calc(100vh-5rem)] items-center gap-12 py-16 md:grid-cols-[1.03fr_0.97fr] md:py-20 lg:py-24">
           <div className="max-w-2xl">
-            <p className="mb-5 text-sm font-semibold uppercase tracking-[0.24em] text-accent">
+            <p className="mb-5 text-sm font-semibold uppercase text-accent">
               LA ESPERANZA
             </p>
             <h1 className="text-balance font-serif text-5xl font-semibold leading-[0.95] text-charcoal sm:text-6xl lg:text-7xl">
@@ -53,17 +55,16 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative mx-auto aspect-[4/5] w-full max-w-[30rem] rounded-card border border-border bg-surface-strong p-4 shadow-soft">
-            <div className="relative h-full overflow-hidden rounded-card bg-[#ebe9e1]">
-              <div className="absolute inset-x-8 top-10 h-36 rounded-full bg-white/55 blur-3xl" />
-              <div className="absolute left-1/2 top-[14%] h-[68%] w-[42%] -translate-x-1/2 rounded-t-[999px] rounded-b-lg border border-white/60 bg-gradient-to-b from-white/80 via-[#d8d1c2]/80 to-[#9e8a73]/85 shadow-[0_32px_80px_rgba(38,36,33,0.18)]" />
-              <div className="absolute left-1/2 top-[8%] h-14 w-24 -translate-x-1/2 rounded-lg border border-white/70 bg-[#c9beb0]" />
-              <div className="absolute left-1/2 top-[43%] w-[56%] -translate-x-1/2 rounded-card border border-white/60 bg-white/62 px-6 py-6 text-center backdrop-blur-sm">
-                <p className="font-serif text-3xl font-semibold text-charcoal">LA</p>
-                <p className="mt-1 text-xs font-semibold uppercase text-muted">
-                  Esperanza
-                </p>
-              </div>
+          <div className="relative mx-auto aspect-[4/5] w-full max-w-[30rem] overflow-hidden rounded-card border border-border bg-surface-strong p-3 shadow-soft">
+            <div className="relative h-full overflow-hidden rounded-card bg-[#171715]">
+              <Image
+                src={flameBottle}
+                alt="LA ESPERANZA perfume bottle used as a brand visual"
+                fill
+                priority
+                sizes="(min-width: 768px) 40vw, 90vw"
+                className="object-cover"
+              />
             </div>
           </div>
         </Container>
@@ -100,7 +101,18 @@ export default function Home() {
           />
 
           <div className="grid gap-4 sm:grid-cols-2">
-            {["App Router", "TypeScript", "Tailwind CSS", "Reusable UI", "Responsive Layout", "Soft Grey Theme"].map((item) => (
+            {[
+              "App Router",
+              "TypeScript",
+              "Tailwind CSS",
+              "Reusable UI",
+              "Responsive Layout",
+              "Soft Grey Theme",
+              "Hooks",
+              "Services",
+              "Types",
+              "Supabase",
+            ].map((item) => (
               <Card key={item} className="min-h-28 p-5">
                 <p className="text-sm font-semibold uppercase text-accent">
                   {item}
