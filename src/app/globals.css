@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* Brand tokens: a soft grey-pink foundation with restrained fragrance accents. */
 :root {
   --background: #fcf8f8;
   --foreground: #262421;
@@ -34,6 +35,7 @@
   --shadow-soft: var(--shadow-soft);
 }
 
+/* Global page defaults keep the App Router shell consistent across future routes. */
 * {
   box-sizing: border-box;
 }

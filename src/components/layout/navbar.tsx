@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
 import { navItems, siteConfig } from "@/lib/site";
 
+// Primary navigation is intentionally simple until storefront routes are added.
 export function Navbar() {
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-background/82 backdrop-blur-xl">

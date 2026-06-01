@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Container } from "@/components/layout/container";
 import { footerLinks, siteConfig } from "@/lib/site";
 
+// Footer keeps brand context visible while the ecommerce surface is still being planned.
 export function Footer() {
   return (
     <footer className="bg-charcoal py-12 text-white">

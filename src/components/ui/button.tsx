@@ -18,6 +18,7 @@ const sizes = {
   md: "h-12 px-6 text-sm",
 };
 
+// Reusable rounded button foundation for links and actions across future routes.
 export function Button({
   children,
   className,

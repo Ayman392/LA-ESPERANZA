@@ -5,6 +5,7 @@ type CardProps = {
   className?: string;
 };
 
+// Rounded card primitive used for brand, content, and future product surfaces.
 export function Card({ children, className }: CardProps) {
   return (
     <article
