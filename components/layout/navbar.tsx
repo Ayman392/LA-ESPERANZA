@@ -14,18 +14,18 @@ export function Navbar() {
 
         <nav aria-label="Primary navigation" className="hidden items-center gap-8 md:flex">
           {navItems.map((item) => (
-            <a
+            <Link
               key={item.href}
               href={item.href}
               className="text-sm font-medium text-muted transition hover:text-charcoal"
             >
               {item.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
-        <Button href="#structure" size="sm" variant="secondary">
-          Project Base
+        <Button href="/shop" size="sm" variant="secondary">
+          Shop
         </Button>
       </Container>
     </header>

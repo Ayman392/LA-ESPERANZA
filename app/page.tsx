@@ -55,6 +55,9 @@ export default function Home() {
               <Button href="#structure" variant="secondary">
                 View Structure
               </Button>
+              <Button href="/shop" variant="secondary">
+                Browse Catalog
+              </Button>
             </div>
           </FadeIn>
 

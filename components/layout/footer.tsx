@@ -15,17 +15,11 @@ export function Footer() {
           </p>
         </div>
         <nav aria-label="Footer navigation" className="flex flex-wrap gap-5 text-sm text-white/72">
-          {footerLinks.map((item) =>
-            item.href.startsWith("#") ? (
-              <a key={item.href} className="transition hover:text-white" href={item.href}>
-                {item.label}
-              </a>
-            ) : (
-              <Link key={item.href} className="transition hover:text-white" href={item.href}>
-                {item.label}
-              </Link>
-            ),
-          )}
+          {footerLinks.map((item) => (
+            <Link key={item.href} className="transition hover:text-white" href={item.href}>
+              {item.label}
+            </Link>
+          ))}
         </nav>
       </Container>
     </footer>

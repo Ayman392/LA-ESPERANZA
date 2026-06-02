@@ -8,12 +8,14 @@ export const siteConfig = {
 };
 
 export const navItems: NavItem[] = [
-  { label: "Foundation", href: "#brand-foundation" },
-  { label: "Structure", href: "#structure" },
+  { label: "Shop", href: "/shop" },
+  { label: "Foundation", href: "/#brand-foundation" },
+  { label: "Structure", href: "/#structure" },
 ];
 
 export const footerLinks: NavItem[] = [
-  { label: "Foundation", href: "#brand-foundation" },
-  { label: "Structure", href: "#structure" },
   { label: "Home", href: "/" },
+  { label: "Shop", href: "/shop" },
+  { label: "Foundation", href: "/#brand-foundation" },
+  { label: "Structure", href: "/#structure" },
 ];
