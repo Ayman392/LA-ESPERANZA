@@ -33,3 +33,11 @@ public/
 ```
 
 This starter intentionally includes brand architecture, reusable components, a soft grey `#FCF8F8` theme, responsive typography, rounded cards/buttons, navbar, footer, homepage skeleton, Framer Motion primitives, and Supabase-ready placeholders only. Ecommerce features are left for a later build phase.
+
+## Phase 2 Catalog
+
+The product catalog browsing system is available at `/shop`.
+
+It includes 5 inspired perfume products, product detail pages, search, gender/price/occasion filters, a responsive grid, and an empty state. Cart, checkout, payments, and admin tooling are intentionally not included yet.
+
+See `docs/product-catalog.md` for the Phase 2 structure.
