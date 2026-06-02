@@ -41,7 +41,7 @@ export function ShopCatalog({ products, occasions }: ShopCatalogProps) {
               Catalog
             </p>
             <h2 className="font-serif text-3xl font-semibold text-charcoal">
-              {filteredProducts.length} perfumes found
+              {filteredProducts.length} of {products.length} perfumes found
             </h2>
           </div>
           <p className="text-sm text-muted">
