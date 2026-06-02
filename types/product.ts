@@ -11,7 +11,7 @@ export type Product = {
   gender: ProductGender;
   sizes: ProductSize[];
   prices: ProductPrices;
-  stockQuantity: number;
+  stock: number;
   topNotes: string[];
   middleNotes: string[];
   baseNotes: string[];

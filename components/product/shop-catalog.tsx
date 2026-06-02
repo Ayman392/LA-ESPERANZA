@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ProductFiltersPanel } from "@/components/product/product-filters";
-import { ProductGrid } from "@/components/product/product-grid";
+import { ProductFilters } from "@/components/product/ProductFilters";
+import { ProductGrid } from "@/components/product/ProductGrid";
 import { filterProducts, maxCatalogPrice } from "@/services/product-filters";
-import type { Product, ProductFilters } from "@/types/product";
+import type { Product, ProductFilters as ProductFilterState } from "@/types/product";
 
 type ShopCatalogProps = {
   products: Product[];
@@ -14,7 +14,7 @@ type ShopCatalogProps = {
 // Local catalog explorer for Phase 2. No cart, checkout, or order state is created here.
 export function ShopCatalog({ products, occasions }: ShopCatalogProps) {
   const maxPrice = maxCatalogPrice(products);
-  const [filters, setFilters] = useState<ProductFilters>({
+  const [filters, setFilters] = useState<ProductFilterState>({
     search: "",
     gender: "All",
     maxPrice,
@@ -28,7 +28,7 @@ export function ShopCatalog({ products, occasions }: ShopCatalogProps) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[18rem_1fr] lg:items-start">
-      <ProductFiltersPanel
+      <ProductFilters
         filters={filters}
         maxPrice={maxPrice}
         occasions={occasions}

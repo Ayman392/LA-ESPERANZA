@@ -5,7 +5,7 @@ The LA ESPERANZA product catalog system is implemented as a browsing-only storef
 ## Routes
 
 - `/shop` displays the searchable and filterable product catalog.
-- `/shop/[slug]` displays a static product detail page for each perfume.
+- `/products/[slug]` displays a static product detail page for each perfume.
 
 ## Catalog Features
 
@@ -28,7 +28,7 @@ Each product includes:
 - `gender`
 - `sizes`
 - `prices`
-- `stockQuantity`
+- `stock`
 - `topNotes`
 - `middleNotes`
 - `baseNotes`

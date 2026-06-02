@@ -47,7 +47,10 @@ See `docs/product-catalog.md` for the Phase 2 structure.
 
 ```text
 app/shop/page.tsx
-app/shop/[slug]/page.tsx
+app/products/[slug]/page.tsx
+components/product/ProductCard.tsx
+components/product/ProductFilters.tsx
+components/product/ProductGrid.tsx
 components/product/
 lib/products.ts
 services/product-filters.ts
