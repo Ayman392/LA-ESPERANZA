@@ -21,6 +21,7 @@ app/
 components/
   layout/
   motion/
+  product/
   shared/
   ui/
 hooks/
@@ -32,7 +33,7 @@ docs/
 public/
 ```
 
-This starter intentionally includes brand architecture, reusable components, a soft grey `#FCF8F8` theme, responsive typography, rounded cards/buttons, navbar, footer, homepage skeleton, Framer Motion primitives, and Supabase-ready placeholders only. Ecommerce features are left for a later build phase.
+This project now includes the Phase 1 brand foundation and Phase 2 product catalog browsing system. Cart, checkout, payments, and admin tooling are still intentionally left for later phases.
 
 ## Phase 2 Catalog
 
@@ -41,3 +42,15 @@ The product catalog browsing system is available at `/shop`.
 It includes 5 inspired perfume products, product detail pages, search, gender/price/occasion filters, a responsive grid, and an empty state. Cart, checkout, payments, and admin tooling are intentionally not included yet.
 
 See `docs/product-catalog.md` for the Phase 2 structure.
+
+## Phase 2 Files
+
+```text
+app/shop/page.tsx
+app/shop/[slug]/page.tsx
+components/product/
+lib/products.ts
+services/product-filters.ts
+types/product.ts
+public/products/
+```

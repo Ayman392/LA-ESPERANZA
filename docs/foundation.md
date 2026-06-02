@@ -12,10 +12,10 @@ This project is initialized as a professional Next.js, TypeScript, and Tailwind 
 - Framer Motion animation primitive
 - Root-level folders for future hooks, types, services, Supabase integration, and documentation
 - `public/` folder for static assets
+- Phase 2 product catalog browsing system is documented separately in `docs/product-catalog.md`
 
 ## Out Of Scope
 
-- Product catalog
 - Cart and checkout
 - Authentication
 - Payments
