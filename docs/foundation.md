@@ -10,7 +10,7 @@ This project is initialized as a professional Next.js, TypeScript, and Tailwind 
 - Reusable layout, card, button, and section heading components
 - Navbar, footer, and homepage skeleton
 - Framer Motion animation primitive
-- Clean folders for future hooks, types, services, Supabase integration, and documentation
+- Root-level folders for future hooks, types, services, Supabase integration, and documentation
 - `public/` folder for static assets
 
 ## Out Of Scope

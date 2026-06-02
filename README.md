@@ -14,21 +14,20 @@ npm run typecheck
 ## Structure
 
 ```text
-src/
-  app/
-    globals.css
-    layout.tsx
-    page.tsx
-  components/
-    layout/
-    motion/
-    shared/
-    ui/
-  hooks/
-  lib/
-  services/
-  supabase/
-  types/
+app/
+  globals.css
+  layout.tsx
+  page.tsx
+components/
+  layout/
+  motion/
+  shared/
+  ui/
+hooks/
+lib/
+services/
+supabase/
+types/
 docs/
 public/
 ```

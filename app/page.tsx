@@ -7,7 +7,7 @@ import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { FadeIn } from "@/components/motion/fade-in";
 import { SectionHeading } from "@/components/shared/section-heading";
-import flameBottle from "../../product pic/flame.png";
+import flameBottle from "../product pic/flame.png";
 
 // Brand pillars define the homepage skeleton without introducing product data or commerce logic.
 const brandPillars = [
