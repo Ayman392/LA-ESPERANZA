@@ -85,9 +85,13 @@ export function ProductFilters({
           max={maxPrice}
           step={50}
           value={filters.minPrice}
-          onChange={(event) =>
-            updateFilters({ minPrice: Number(event.target.value) })
-          }
+          onChange={(event) => {
+            const minPriceValue = Number(event.target.value);
+
+            updateFilters({
+              minPrice: Math.min(minPriceValue, filters.maxPrice),
+            });
+          }}
           className="mt-3 w-full accent-[#8f7356]"
         />
         <input
@@ -96,9 +100,13 @@ export function ProductFilters({
           max={maxPrice}
           step={50}
           value={filters.maxPrice}
-          onChange={(event) =>
-            updateFilters({ maxPrice: Number(event.target.value) })
-          }
+          onChange={(event) => {
+            const maxPriceValue = Number(event.target.value);
+
+            updateFilters({
+              maxPrice: Math.max(maxPriceValue, filters.minPrice),
+            });
+          }}
           className="mt-3 w-full accent-[#8f7356]"
         />
       </label>
