@@ -112,8 +112,8 @@ export default function Home() {
           <FadeIn>
             <SectionHeading
               eyebrow="Architecture"
-              title="Ready for product, cart, and content layers later."
-              description="The current build stops at the foundation: app shell, layout, UI primitives, theme tokens, and a homepage skeleton."
+              title="Foundation complete, catalog browsing live."
+              description="The current build includes the app shell, reusable UI primitives, theme tokens, homepage skeleton, and Phase 2 product catalog."
             />
           </FadeIn>
 

@@ -45,7 +45,7 @@ export function ShopCatalog({ products, occasions }: ShopCatalogProps) {
             </h2>
           </div>
           <p className="text-sm text-muted">
-            Browsing only. Cart and checkout arrive in a later phase.
+            Browsing-only catalog. Cart and checkout are excluded from Phase 2.
           </p>
         </div>
         <ProductGrid products={filteredProducts} />

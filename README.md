@@ -33,13 +33,13 @@ docs/
 public/
 ```
 
-This project now includes the Phase 1 brand foundation and Phase 2 product catalog browsing system. Cart, checkout, payments, and admin tooling are still intentionally left for later phases.
+This project includes the Phase 1 brand foundation and the Phase 2 product catalog browsing system. Cart, checkout, payments, and admin tooling are intentionally not part of this scope.
 
 ## Phase 2 Catalog
 
 The product catalog browsing system is available at `/shop`.
 
-It includes 5 inspired perfume products, product detail pages, search, gender/price/occasion filters, a responsive grid, and an empty state. Cart, checkout, payments, and admin tooling are intentionally not included yet.
+It includes 5 inspired perfume products, product detail pages, search, gender/price/occasion filters, a responsive grid, and an empty state. The catalog is browsing-only by design.
 
 See `docs/product-catalog.md` for the Phase 2 structure.
 

@@ -39,4 +39,4 @@ Each product includes:
 
 ## Current Boundary
 
-Cart, checkout, payments, and admin tools are intentionally not included in Phase 2.
+Phase 2 is a browsing-only product catalog. Cart, checkout, payments, and admin tools are intentionally excluded from this phase.
