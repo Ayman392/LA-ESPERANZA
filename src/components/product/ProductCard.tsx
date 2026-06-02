@@ -14,7 +14,7 @@ export function ProductCard({ product }: ProductCardProps) {
       <Card className="flex h-full flex-col overflow-hidden transition duration-300 hover:-translate-y-1 hover:shadow-soft">
         <div className="relative aspect-[4/5] overflow-hidden bg-[#eee7e4]">
           <Image
-            src={product.imagePath}
+            src={product.image}
             alt={`${product.name} perfume bottle`}
             fill
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
@@ -38,7 +38,7 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
 
           <p className="mt-3 text-sm leading-6 text-muted">
-            Inspired by {product.inspired_by}
+            Inspired by {product.inspiredBy}
           </p>
           <p className="mt-4 line-clamp-2 text-sm leading-6 text-muted">
             {product.description}
@@ -48,7 +48,7 @@ export function ProductCard({ product }: ProductCardProps) {
             <div>
               <p className="text-xs text-muted">From</p>
               <p className="text-lg font-semibold text-charcoal">
-                BDT {product.prices["15ml"]}
+                BDT {product.size15mlPrice}
               </p>
             </div>
             <p className="text-xs font-medium text-muted">

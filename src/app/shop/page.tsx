@@ -25,7 +25,7 @@ export default function ShopPage() {
           </h1>
           <p className="mt-5 text-base leading-8 text-muted">
             Five inspired perfumes with typed product data, fragrance notes,
-            stock context, and clean catalog filtering.
+            stock context, price range filtering, and clean catalog browsing.
           </p>
         </div>
         <ShopCatalog products={products} occasions={productOccasions} />

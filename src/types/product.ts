@@ -1,16 +1,13 @@
 export type ProductGender = "Men" | "Women" | "Unisex";
 
-export type ProductSize = "15ml" | "30ml";
-
-export type ProductPrices = Record<ProductSize, number>;
-
 export type Product = {
+  id: string;
   slug: string;
   name: string;
-  inspired_by: string;
+  inspiredBy: string;
   gender: ProductGender;
-  sizes: ProductSize[];
-  prices: ProductPrices;
+  size15mlPrice: number;
+  size30mlPrice: number;
   stock: number;
   topNotes: string[];
   middleNotes: string[];
@@ -18,12 +15,13 @@ export type Product = {
   longevity: string;
   occasion: string;
   description: string;
-  imagePath: string;
+  image: string;
 };
 
 export type ProductFilters = {
   search: string;
   gender: "All" | ProductGender;
+  minPrice: number;
   maxPrice: number;
   occasion: "All" | string;
 };

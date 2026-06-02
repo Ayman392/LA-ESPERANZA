@@ -5,6 +5,7 @@ import type { ProductFilters, ProductGender } from "@/types/product";
 
 type ProductFiltersProps = {
   filters: ProductFilters;
+  minPrice: number;
   maxPrice: number;
   occasions: string[];
   onChange: (filters: ProductFilters) => void;
@@ -20,6 +21,7 @@ const genderOptions: ProductFilters["gender"][] = [
 // Search and filter controls operate on local catalog data only.
 export function ProductFilters({
   filters,
+  minPrice,
   maxPrice,
   occasions,
   onChange,
@@ -72,12 +74,25 @@ export function ProductFilters({
 
       <label className="mt-5 block">
         <span className="flex items-center justify-between gap-3 text-sm font-medium text-charcoal">
-          Max price
-          <span className="text-muted">BDT {filters.maxPrice}</span>
+          Price range
+          <span className="text-muted">
+            BDT {filters.minPrice} - {filters.maxPrice}
+          </span>
         </span>
         <input
           type="range"
-          min={500}
+          min={minPrice}
+          max={maxPrice}
+          step={50}
+          value={filters.minPrice}
+          onChange={(event) =>
+            updateFilters({ minPrice: Number(event.target.value) })
+          }
+          className="mt-3 w-full accent-[#8f7356]"
+        />
+        <input
+          type="range"
+          min={minPrice}
           max={maxPrice}
           step={50}
           value={filters.maxPrice}

@@ -1,12 +1,12 @@
 const tailwindConfig = {
   content: [
-    "./app/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./hooks/**/*.{ts,tsx}",
-    "./lib/**/*.{ts,tsx}",
-    "./services/**/*.{ts,tsx}",
-    "./supabase/**/*.{ts,tsx}",
-    "./types/**/*.{ts,tsx}",
+    "./src/app/**/*.{ts,tsx}",
+    "./src/components/**/*.{ts,tsx}",
+    "./src/hooks/**/*.{ts,tsx}",
+    "./src/lib/**/*.{ts,tsx}",
+    "./src/services/**/*.{ts,tsx}",
+    "./src/supabase/**/*.{ts,tsx}",
+    "./src/types/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {

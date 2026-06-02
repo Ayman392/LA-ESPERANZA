@@ -23,11 +23,13 @@ The LA ESPERANZA product catalog system is implemented as a browsing-only storef
 
 Each product includes:
 
+- `id`
 - `name`
-- `inspired_by`
+- `slug`
+- `inspiredBy`
 - `gender`
-- `sizes`
-- `prices`
+- `size15mlPrice`
+- `size30mlPrice`
 - `stock`
 - `topNotes`
 - `middleNotes`
@@ -35,7 +37,7 @@ Each product includes:
 - `longevity`
 - `occasion`
 - `description`
-- `imagePath`
+- `image`
 
 ## Current Boundary
 

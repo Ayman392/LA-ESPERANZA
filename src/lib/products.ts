@@ -3,15 +3,13 @@ import type { Product } from "@/types/product";
 // Central product catalog data. Phase 2 keeps this local and typed until a backend is introduced.
 export const products: Product[] = [
   {
+    id: "prd-flame",
     slug: "flame",
     name: "Flame",
-    inspired_by: "Versace Eros",
+    inspiredBy: "Versace Eros",
     gender: "Men",
-    sizes: ["15ml", "30ml"],
-    prices: {
-      "15ml": 650,
-      "30ml": 1150,
-    },
+    size15mlPrice: 650,
+    size30mlPrice: 1150,
     stock: 24,
     topNotes: ["Mint", "Green apple", "Lemon"],
     middleNotes: ["Tonka bean", "Ambroxan", "Geranium"],
@@ -20,18 +18,16 @@ export const products: Product[] = [
     occasion: "Evening",
     description:
       "A bold, magnetic scent with crisp freshness, warm sweetness, and confident depth for evening wear.",
-    imagePath: "/products/flame.png",
+    image: "/products/flame.png",
   },
   {
+    id: "prd-rosee",
     slug: "rosee",
     name: "Rosee",
-    inspired_by: "Miss Dior",
+    inspiredBy: "Miss Dior",
     gender: "Women",
-    sizes: ["15ml", "30ml"],
-    prices: {
-      "15ml": 620,
-      "30ml": 1100,
-    },
+    size15mlPrice: 620,
+    size30mlPrice: 1100,
     stock: 31,
     topNotes: ["Mandarin", "Bergamot", "Pink pepper"],
     middleNotes: ["Rose", "Peony", "Jasmine"],
@@ -40,18 +36,16 @@ export const products: Product[] = [
     occasion: "Daily",
     description:
       "A soft floral signature with polished citrus brightness and a graceful musky finish.",
-    imagePath: "/products/rosee.png",
+    image: "/products/rosee.png",
   },
   {
+    id: "prd-velour",
     slug: "velour",
     name: "Velour",
-    inspired_by: "Yves Saint Laurent Libre",
+    inspiredBy: "Yves Saint Laurent Libre",
     gender: "Women",
-    sizes: ["15ml", "30ml"],
-    prices: {
-      "15ml": 700,
-      "30ml": 1250,
-    },
+    size15mlPrice: 700,
+    size30mlPrice: 1250,
     stock: 18,
     topNotes: ["Lavender", "Mandarin", "Blackcurrant"],
     middleNotes: ["Orange blossom", "Jasmine", "Neroli"],
@@ -60,18 +54,16 @@ export const products: Product[] = [
     occasion: "Formal",
     description:
       "A sleek floral amber profile with aromatic lift, creamy warmth, and a dressed-up finish.",
-    imagePath: "/products/velour.png",
+    image: "/products/velour.png",
   },
   {
+    id: "prd-poseidon",
     slug: "poseidon",
     name: "Poseidon",
-    inspired_by: "Acqua di Gio Profumo",
+    inspiredBy: "Acqua di Gio Profumo",
     gender: "Men",
-    sizes: ["15ml", "30ml"],
-    prices: {
-      "15ml": 680,
-      "30ml": 1200,
-    },
+    size15mlPrice: 680,
+    size30mlPrice: 1200,
     stock: 27,
     topNotes: ["Sea notes", "Bergamot", "Grapefruit"],
     middleNotes: ["Sage", "Rosemary", "Geranium"],
@@ -80,18 +72,16 @@ export const products: Product[] = [
     occasion: "Office",
     description:
       "A refined aquatic aromatic fragrance with mineral freshness and a smoky masculine base.",
-    imagePath: "/products/poseidon.png",
+    image: "/products/poseidon.png",
   },
   {
+    id: "prd-sera",
     slug: "sera",
     name: "Sera",
-    inspired_by: "Maison Francis Kurkdjian Baccarat Rouge 540",
+    inspiredBy: "Maison Francis Kurkdjian Baccarat Rouge 540",
     gender: "Unisex",
-    sizes: ["15ml", "30ml"],
-    prices: {
-      "15ml": 780,
-      "30ml": 1400,
-    },
+    size15mlPrice: 780,
+    size30mlPrice: 1400,
     stock: 15,
     topNotes: ["Saffron", "Jasmine", "Orange zest"],
     middleNotes: ["Amberwood", "Ambergris", "Hedione"],
@@ -100,7 +90,7 @@ export const products: Product[] = [
     occasion: "Signature",
     description:
       "A luminous amber-woody scent with airy sweetness, polished warmth, and memorable projection.",
-    imagePath: "/products/sera.png",
+    image: "/products/sera.png",
   },
 ];
 

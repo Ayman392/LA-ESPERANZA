@@ -14,21 +14,24 @@ npm run typecheck
 ## Structure
 
 ```text
-app/
-  globals.css
-  layout.tsx
-  page.tsx
-components/
-  layout/
-  motion/
-  product/
-  shared/
-  ui/
-hooks/
-lib/
-services/
-supabase/
-types/
+src/
+  app/
+    globals.css
+    layout.tsx
+    page.tsx
+    shop/
+    products/
+  components/
+    layout/
+    motion/
+    product/
+    shared/
+    ui/
+  hooks/
+  lib/
+  services/
+  supabase/
+  types/
 docs/
 public/
 ```
@@ -46,14 +49,13 @@ See `docs/product-catalog.md` for the Phase 2 structure.
 ## Phase 2 Files
 
 ```text
-app/shop/page.tsx
-app/products/[slug]/page.tsx
-components/product/ProductCard.tsx
-components/product/ProductFilters.tsx
-components/product/ProductGrid.tsx
-components/product/
-lib/products.ts
-services/product-filters.ts
-types/product.ts
+src/app/shop/page.tsx
+src/app/products/[slug]/page.tsx
+src/components/product/ProductCard.tsx
+src/components/product/ProductFilters.tsx
+src/components/product/ProductGrid.tsx
+src/lib/products.ts
+src/services/product-filters.ts
+src/types/product.ts
 public/products/
 ```

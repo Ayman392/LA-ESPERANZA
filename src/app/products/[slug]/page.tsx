@@ -67,7 +67,7 @@ export default async function ProductDetailPage({
           <div className="relative aspect-[4/5] overflow-hidden rounded-card border border-border bg-surface-strong p-3 shadow-soft">
             <div className="relative h-full overflow-hidden rounded-card bg-[#171715]">
               <Image
-                src={product.imagePath}
+                src={product.image}
                 alt={`${product.name} perfume bottle`}
                 fill
                 priority
@@ -85,7 +85,7 @@ export default async function ProductDetailPage({
               {product.name}
             </h1>
             <p className="mt-3 text-lg text-muted">
-              Inspired by {product.inspired_by}
+              Inspired by {product.inspiredBy}
             </p>
             <p className="mt-6 max-w-2xl text-base leading-8 text-muted">
               {product.description}
@@ -123,14 +123,17 @@ export default async function ProductDetailPage({
                 Sizes and prices
               </p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {product.sizes.map((size) => (
+                {[
+                  ["15ml", product.size15mlPrice],
+                  ["30ml", product.size30mlPrice],
+                ].map(([size, price]) => (
                   <div
                     key={size}
                     className="rounded-card border border-border bg-background p-4"
                   >
                     <p className="text-sm text-muted">{size}</p>
                     <p className="mt-1 text-2xl font-semibold text-charcoal">
-                      BDT {product.prices[size]}
+                      BDT {price}
                     </p>
                   </div>
                 ))}
