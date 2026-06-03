@@ -77,18 +77,22 @@ export const validateCheckoutForm = (
 };
 
 export const createOrderItems = (lineItems: CartLineItem[]): OrderItem[] =>
-  lineItems.map((item) => ({
-    productId: item.productId,
-    slug: item.product.slug,
-    name: item.product.name,
-    inspiredBy: item.product.inspiredBy,
-    size: item.size,
-    quantity: item.quantity,
-    unitPrice: item.unitPrice,
-    lineTotal: item.lineTotal,
-    totalPrice: item.lineTotal,
-    image: item.product.image,
-  }));
+  lineItems.map((item) => {
+    const itemTotal = item.unitPrice * item.quantity;
+
+    return {
+      productId: item.productId,
+      slug: item.product.slug,
+      name: item.product.name,
+      inspiredBy: item.product.inspiredBy,
+      size: item.size,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      lineTotal: itemTotal,
+      totalPrice: itemTotal,
+      image: item.product.image,
+    };
+  });
 
 export const calculateOrderTotals = (
   subtotal: number,

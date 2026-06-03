@@ -113,11 +113,22 @@ const mapOrderItems = (items: OrderItemRecord[]): OrderItem[] =>
     image: item.image,
   }));
 
+const normalizeOrderItemTotals = (item: OrderItem): OrderItem => {
+  const itemTotal = item.unitPrice * item.quantity;
+
+  return {
+    ...item,
+    lineTotal: itemTotal,
+    totalPrice: itemTotal,
+  };
+};
+
 // This function must only run on the server because it uses the Supabase service role key.
 export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
   const supabase = createSupabaseServerClient();
   const customer = await createCustomer(supabase, payload.customer);
   const orderNumber = generateOrderNumber();
+  const normalizedItems = payload.items.map(normalizeOrderItemTotals);
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
@@ -144,7 +155,7 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
   }
 
   const { error: itemsError } = await supabase.from("order_items").insert(
-    payload.items.map((item) => ({
+    normalizedItems.map((item) => ({
       order_id: order.id,
       product_id: item.productId,
       product_slug: item.slug,
@@ -176,7 +187,7 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
     throw new Error(paymentError.message);
   }
 
-  return mapSavedOrder(order, payload.items, payload.payment);
+  return mapSavedOrder(order, normalizedItems, payload.payment);
 };
 
 export const getSupabaseOrderByNumber = async (orderNumber: string) => {
