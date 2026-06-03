@@ -15,7 +15,7 @@ type ShopCatalogProps = {
   occasions: string[];
 };
 
-// Local catalog explorer for Phase 2. No cart, checkout, or order state is created here.
+// Local catalog explorer keeps filtering client-side for a fast storefront feel.
 export function ShopCatalog({ products, occasions }: ShopCatalogProps) {
   const maxPrice = maxCatalogPrice(products);
   const minPrice = minCatalogPrice(products);
@@ -52,7 +52,7 @@ export function ShopCatalog({ products, occasions }: ShopCatalogProps) {
             </h2>
           </div>
           <p className="text-sm text-muted">
-            Browsing-only catalog. Cart and checkout are excluded from Phase 2.
+            Add favorites or build a cart directly from the catalog.
           </p>
         </div>
         <ProductGrid products={filteredProducts} />

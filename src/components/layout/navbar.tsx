@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { NavStoreBadges } from "@/components/layout/nav-store-badges";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
 import { navItems, siteConfig } from "@/lib/site";
 
-// Primary navigation is intentionally simple until storefront routes are added.
+// Primary navigation keeps catalog, wishlist, and cart access visible on every route.
 export function Navbar() {
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-background/82 backdrop-blur-xl">
@@ -24,9 +25,12 @@ export function Navbar() {
           ))}
         </nav>
 
-        <Button href="/shop" size="sm" variant="secondary">
-          Shop
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button href="/shop" size="sm" variant="secondary">
+            Shop
+          </Button>
+          <NavStoreBadges />
+        </div>
       </Container>
     </header>
   );

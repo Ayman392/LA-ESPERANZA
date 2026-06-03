@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Container } from "@/components/layout/container";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
+import { ProductActions } from "@/components/product/ProductActions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getProductBySlug, products } from "@/lib/products";
@@ -58,7 +59,7 @@ export default async function ProductDetailPage({
     <main className="min-h-screen">
       <Navbar />
       <Container className="py-12 md:py-16">
-        {/* Product details are informational only; no cart, checkout, payment, or admin actions are present. */}
+        {/* Product details include cart and wishlist actions without checkout or payment flows. */}
         <Button href="/shop" variant="secondary" size="sm">
           Back to shop
         </Button>
@@ -90,6 +91,7 @@ export default async function ProductDetailPage({
             <p className="mt-6 max-w-2xl text-base leading-8 text-muted">
               {product.description}
             </p>
+            <ProductActions product={product} variant="detail" />
 
             <div className="mt-8 grid gap-4 sm:grid-cols-3">
               <Card className="p-5">
