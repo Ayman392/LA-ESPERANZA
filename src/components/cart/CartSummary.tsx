@@ -13,7 +13,7 @@ export function CartSummary({
 }: CartSummaryProps) {
   return (
     <aside className="rounded-card border border-border bg-surface-strong p-6 shadow-soft">
-      {/* Summary totals are informational until checkout is introduced later. */}
+      {/* Cart summary links into the local checkout flow while payment remains manual. */}
       <p className="text-sm font-semibold uppercase text-accent">Cart summary</p>
       <div className="mt-5 space-y-4">
         <div className="flex items-center justify-between text-sm text-muted">
@@ -29,8 +29,14 @@ export function CartSummary({
       </div>
       <div className="mt-6 grid gap-3">
         <Link
-          href="/shop"
+          href="/checkout"
           className="inline-flex h-11 items-center justify-center rounded-full bg-charcoal px-5 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40"
+        >
+          Checkout
+        </Link>
+        <Link
+          href="/shop"
+          className="inline-flex h-11 items-center justify-center rounded-full border border-border bg-background px-5 text-sm font-semibold text-charcoal transition hover:border-accent/45 hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
         >
           Continue shopping
         </Link>
