@@ -86,6 +86,7 @@ export const createOrderItems = (lineItems: CartLineItem[]): OrderItem[] =>
     quantity: item.quantity,
     unitPrice: item.unitPrice,
     lineTotal: item.lineTotal,
+    totalPrice: item.lineTotal,
     image: item.product.image,
   }));
 

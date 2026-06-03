@@ -25,6 +25,7 @@ export type OrderItem = {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  totalPrice: number;
   image: string;
 };
 

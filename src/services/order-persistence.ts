@@ -35,6 +35,7 @@ type OrderItemRecord = {
   quantity: number;
   unit_price: number | string;
   line_total: number | string;
+  total_price: number | string;
   image: string;
 };
 
@@ -99,6 +100,7 @@ const mapSavedOrder = (
 
 const mapOrderItems = (items: OrderItemRecord[]): OrderItem[] =>
   items.map((item) => ({
+    // lineTotal and totalPrice intentionally point to the same stored total.
     productId: item.product_id,
     slug: item.product_slug,
     name: item.product_name,
@@ -107,6 +109,7 @@ const mapOrderItems = (items: OrderItemRecord[]): OrderItem[] =>
     quantity: item.quantity,
     unitPrice: toNumber(item.unit_price),
     lineTotal: toNumber(item.line_total),
+    totalPrice: toNumber(item.total_price),
     image: item.image,
   }));
 
@@ -151,6 +154,7 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
       quantity: item.quantity,
       unit_price: item.unitPrice,
       line_total: item.lineTotal,
+      total_price: item.totalPrice,
       image: item.image,
     })),
   );
@@ -194,7 +198,7 @@ export const getSupabaseOrderByNumber = async (orderNumber: string) => {
       supabase
         .from("order_items")
         .select(
-          "product_id, product_slug, product_name, inspired_by, size, quantity, unit_price, line_total, image",
+          "product_id, product_slug, product_name, inspired_by, size, quantity, unit_price, line_total, total_price, image",
         )
         .eq("order_id", order.id)
         .returns<OrderItemRecord[]>(),
