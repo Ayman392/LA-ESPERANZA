@@ -29,21 +29,11 @@ create table if not exists public.orders (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists orders_customer_id_idx on public.orders(customer_id);
-create index if not exists orders_order_number_idx on public.orders(order_number);
-
+alter table public.customers enable row level security;
 alter table public.orders enable row level security;
 
 drop policy if exists "Allow guest checkout order inserts" on public.orders;
-create policy "Allow guest checkout order inserts"
-  on public.orders
-  for insert
-  to anon
-  with check (true);
-
 drop policy if exists "Allow guest order confirmation reads" on public.orders;
-create policy "Allow guest order confirmation reads"
-  on public.orders
-  for select
-  to anon
-  using (true);
+
+create index if not exists orders_customer_id_idx on public.orders(customer_id);
+create index if not exists orders_order_number_idx on public.orders(order_number);

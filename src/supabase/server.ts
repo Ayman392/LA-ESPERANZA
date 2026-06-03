@@ -2,13 +2,15 @@ import { createClient } from "@supabase/supabase-js";
 import { supabaseConfig } from "@/supabase/config";
 
 export const createSupabaseServerClient = () => {
-  const serverKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? supabaseConfig.anonKey;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseConfig.url || !serverKey) {
-    throw new Error("Supabase server environment variables are not configured.");
+  if (!supabaseConfig.url || !serviceRoleKey) {
+    throw new Error(
+      "Supabase service role environment variables are not configured.",
+    );
   }
 
-  return createClient(supabaseConfig.url, serverKey, {
+  return createClient(supabaseConfig.url, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

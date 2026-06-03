@@ -14,15 +14,4 @@ create unique index if not exists payments_order_id_idx on public.payments(order
 alter table public.payments enable row level security;
 
 drop policy if exists "Allow guest checkout payment inserts" on public.payments;
-create policy "Allow guest checkout payment inserts"
-  on public.payments
-  for insert
-  to anon
-  with check (true);
-
 drop policy if exists "Allow guest payment confirmation reads" on public.payments;
-create policy "Allow guest payment confirmation reads"
-  on public.payments
-  for select
-  to anon
-  using (true);

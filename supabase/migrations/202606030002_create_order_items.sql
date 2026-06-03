@@ -18,15 +18,4 @@ create index if not exists order_items_order_id_idx on public.order_items(order_
 alter table public.order_items enable row level security;
 
 drop policy if exists "Allow guest checkout item inserts" on public.order_items;
-create policy "Allow guest checkout item inserts"
-  on public.order_items
-  for insert
-  to anon
-  with check (true);
-
 drop policy if exists "Allow guest order item reads" on public.order_items;
-create policy "Allow guest order item reads"
-  on public.order_items
-  for select
-  to anon
-  using (true);
