@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+/* Brand tokens: a soft grey-pink foundation with restrained fragrance accents. */
+:root {
+  --background: #fcf8f8;
+  --foreground: #262421;
+  --muted: #736b6b;
+  --surface: #fffdfd;
+  --surface-strong: #ffffff;
+  --border: #eadfdf;
+  --accent: #8f7356;
+  --accent-foreground: #ffffff;
+  --sage: #7a887a;
+  --charcoal: #262421;
+  --font-body: Arial, Helvetica, sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+  --radius-card: 0.5rem;
+  --shadow-soft: 0 24px 80px rgba(38, 36, 33, 0.08);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-sage: var(--sage);
+  --color-charcoal: var(--charcoal);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
+  --radius-card: var(--radius-card);
+  --shadow-soft: var(--shadow-soft);
+}
+
+/* Global page defaults keep the App Router shell consistent across future routes. */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(143, 115, 86, 0.11), transparent 34rem),
+    linear-gradient(180deg, var(--background) 0%, #f8f1f1 48%, #f0eeee 100%);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(143, 115, 86, 0.22);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
