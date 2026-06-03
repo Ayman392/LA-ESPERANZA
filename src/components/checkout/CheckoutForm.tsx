@@ -9,8 +9,10 @@ import { CheckoutOrderSummary } from "@/components/checkout/CheckoutOrderSummary
 import { useCart } from "@/hooks/useCart";
 import {
   createOrderPayload,
+  calculateOrderTotals,
   emptyCheckoutForm,
   isManualPayment,
+  manualPaymentNumbers,
   paymentMethodLabels,
   persistOrder,
   validateCheckoutForm,
@@ -53,6 +55,10 @@ export function CheckoutForm() {
 
   const hasCartItems = lineItems.length > 0;
   const showManualPaymentFields = isManualPayment(values.paymentMethod);
+  const amountToPay = calculateOrderTotals(subtotal).grandTotal;
+  const manualPaymentNumber = isManualPayment(values.paymentMethod)
+    ? manualPaymentNumbers[values.paymentMethod]
+    : null;
 
   const updateValue = <Key extends keyof CheckoutFormValues>(
     key: Key,
@@ -265,37 +271,72 @@ export function CheckoutForm() {
         </div>
 
         {showManualPaymentFields ? (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-5 grid gap-5 sm:grid-cols-2"
-          >
-            <label className={labelClass}>
-              Sender Number
-              <input
-                value={values.senderNumber}
-                onChange={(event) =>
-                  updateValue("senderNumber", event.target.value)
-                }
-                className={inputClass}
-                placeholder="01XXXXXXXXX"
-                autoComplete="tel"
-              />
-              <ErrorText message={errors.senderNumber} />
-            </label>
-            <label className={labelClass}>
-              Transaction ID
-              <input
-                value={values.transactionId}
-                onChange={(event) =>
-                  updateValue("transactionId", event.target.value)
-                }
-                className={inputClass}
-                placeholder="Manual payment transaction ID"
-              />
-              <ErrorText message={errors.transactionId} />
-            </label>
-          </motion.div>
+          <>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-5 rounded-card border border-accent/25 bg-background p-5"
+            >
+              {/* Manual payments are submitted for later admin verification. */}
+              <p className="text-sm font-semibold uppercase text-accent">
+                {paymentMethodLabels[values.paymentMethod]}
+              </p>
+              <div className="mt-4 grid gap-3 text-sm text-muted sm:grid-cols-2">
+                <div className="rounded-card border border-border bg-white p-4">
+                  <p className="text-xs font-semibold uppercase text-accent">
+                    Payment number
+                  </p>
+                  <p className="mt-2 font-semibold text-charcoal">
+                    {manualPaymentNumber}
+                  </p>
+                </div>
+                <div className="rounded-card border border-border bg-white p-4">
+                  <p className="text-xs font-semibold uppercase text-accent">
+                    Amount to pay
+                  </p>
+                  <p className="mt-2 font-semibold text-charcoal">
+                    BDT {amountToPay}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-4 text-sm leading-6 text-muted">
+                Send money first, then enter the sender number and transaction
+                ID below so LA ESPERANZA can verify the payment.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-5 grid gap-5 sm:grid-cols-2"
+            >
+              <label className={labelClass}>
+                Sender Number
+                <input
+                  value={values.senderNumber}
+                  onChange={(event) =>
+                    updateValue("senderNumber", event.target.value)
+                  }
+                  className={inputClass}
+                  placeholder="01XXXXXXXXX"
+                  autoComplete="tel"
+                />
+                <ErrorText message={errors.senderNumber} />
+              </label>
+              <label className={labelClass}>
+                Transaction ID
+                <input
+                  value={values.transactionId}
+                  onChange={(event) =>
+                    updateValue("transactionId", event.target.value)
+                  }
+                  className={inputClass}
+                  placeholder="Manual payment transaction ID"
+                />
+                <ErrorText message={errors.transactionId} />
+              </label>
+            </motion.div>
+          </>
         ) : null}
 
         {submissionError ? (

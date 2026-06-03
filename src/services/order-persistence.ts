@@ -1,8 +1,19 @@
 import "server-only";
 
-import { generateOrderNumber } from "@/lib/orders";
+import {
+  generateOrderNumber,
+  getOrderStatusForPaymentMethod,
+  getPaymentStatusForMethod,
+} from "@/lib/orders";
 import { createSupabaseServerClient } from "@/supabase/server";
-import type { OrderItem, CreateOrderPayload, PaymentMethod, SavedOrder } from "@/types/order";
+import type {
+  CreateOrderPayload,
+  OrderItem,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  SavedOrder,
+} from "@/types/order";
 
 type SupabaseServerClient = ReturnType<typeof createSupabaseServerClient>;
 
@@ -20,6 +31,7 @@ type OrderRecord = {
   delivery_address: string;
   district: string;
   notes: string | null;
+  status: OrderStatus;
   subtotal: number | string;
   delivery_charge: number | string;
   grand_total: number | string;
@@ -41,8 +53,13 @@ type OrderItemRecord = {
 
 type PaymentRecord = {
   method: PaymentMethod;
+  status: PaymentStatus;
+  amount: number | string;
   sender_number: string | null;
   transaction_id: string | null;
+  verified_at: string | null;
+  verified_by: string | null;
+  rejection_reason: string | null;
 };
 
 const toNumber = (value: number | string) =>
@@ -80,6 +97,7 @@ const mapSavedOrder = (
   id: order.id,
   orderNumber: order.order_number,
   customerId: order.customer_id,
+  status: order.status,
   customer: {
     customerName: order.customer_name,
     phone: order.customer_phone,
@@ -129,6 +147,8 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
   const customer = await createCustomer(supabase, payload.customer);
   const orderNumber = generateOrderNumber();
   const normalizedItems = payload.items.map(normalizeOrderItemTotals);
+  const orderStatus = getOrderStatusForPaymentMethod(payload.payment.method);
+  const paymentStatus = getPaymentStatusForMethod(payload.payment.method);
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
@@ -141,12 +161,13 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
       delivery_address: payload.customer.deliveryAddress,
       district: payload.customer.district,
       notes: payload.customer.notes || null,
+      status: orderStatus,
       subtotal: payload.totals.subtotal,
       delivery_charge: payload.totals.deliveryCharge,
       grand_total: payload.totals.grandTotal,
     })
     .select(
-      "id, order_number, customer_id, customer_name, customer_phone, customer_email, delivery_address, district, notes, subtotal, delivery_charge, grand_total, created_at",
+      "id, order_number, customer_id, customer_name, customer_phone, customer_email, delivery_address, district, notes, status, subtotal, delivery_charge, grand_total, created_at",
     )
     .single<OrderRecord>();
 
@@ -177,7 +198,7 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
   const { error: paymentError } = await supabase.from("payments").insert({
     order_id: order.id,
     method: payload.payment.method,
-    status: payload.payment.method === "cod" ? "pending" : "submitted",
+    status: paymentStatus,
     amount: payload.totals.grandTotal,
     sender_number: payload.payment.senderNumber ?? null,
     transaction_id: payload.payment.transactionId ?? null,
@@ -187,7 +208,11 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
     throw new Error(paymentError.message);
   }
 
-  return mapSavedOrder(order, normalizedItems, payload.payment);
+  return mapSavedOrder(order, normalizedItems, {
+    ...payload.payment,
+    status: paymentStatus,
+    amount: payload.totals.grandTotal,
+  });
 };
 
 export const getSupabaseOrderByNumber = async (orderNumber: string) => {
@@ -195,7 +220,7 @@ export const getSupabaseOrderByNumber = async (orderNumber: string) => {
   const { data: order, error: orderError } = await supabase
     .from("orders")
     .select(
-      "id, order_number, customer_id, customer_name, customer_phone, customer_email, delivery_address, district, notes, subtotal, delivery_charge, grand_total, created_at",
+      "id, order_number, customer_id, customer_name, customer_phone, customer_email, delivery_address, district, notes, status, subtotal, delivery_charge, grand_total, created_at",
     )
     .eq("order_number", orderNumber)
     .single<OrderRecord>();
@@ -215,7 +240,9 @@ export const getSupabaseOrderByNumber = async (orderNumber: string) => {
         .returns<OrderItemRecord[]>(),
       supabase
         .from("payments")
-        .select("method, sender_number, transaction_id")
+        .select(
+          "method, status, amount, sender_number, transaction_id, verified_at, verified_by, rejection_reason",
+        )
         .eq("order_id", order.id)
         .single<PaymentRecord>(),
     ]);
@@ -230,7 +257,12 @@ export const getSupabaseOrderByNumber = async (orderNumber: string) => {
 
   return mapSavedOrder(order, mapOrderItems(items ?? []), {
     method: payment.method,
+    status: payment.status,
+    amount: toNumber(payment.amount),
     senderNumber: payment.sender_number ?? undefined,
     transactionId: payment.transaction_id ?? undefined,
+    verifiedAt: payment.verified_at ?? undefined,
+    verifiedBy: payment.verified_by ?? undefined,
+    rejectionReason: payment.rejection_reason ?? undefined,
   });
 };

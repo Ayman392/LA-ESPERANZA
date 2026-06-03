@@ -4,8 +4,10 @@ import type {
   CheckoutFormValues,
   CreateOrderPayload,
   OrderItem,
+  OrderStatus,
   OrderTotals,
   PaymentMethod,
+  PaymentStatus,
   SavedOrder,
 } from "@/types/order";
 
@@ -16,6 +18,35 @@ export const paymentMethodLabels: Record<PaymentMethod, string> = {
   bkash: "bKash Manual Payment",
   nagad: "Nagad Manual Payment",
 };
+
+export const paymentStatusLabels: Record<PaymentStatus, string> = {
+  pending_cod: "Pending COD",
+  verification_required: "Verification Required",
+  verified: "Verified",
+  rejected: "Rejected",
+};
+
+export const manualPaymentNumbers: Record<Exclude<PaymentMethod, "cod">, string> = {
+  bkash: "01XXXXXXXXX",
+  nagad: "01XXXXXXXXX",
+};
+
+export const getOrderStatusForPaymentMethod = (
+  paymentMethod: PaymentMethod,
+): OrderStatus =>
+  isManualPayment(paymentMethod) ? "payment_verification" : "pending";
+
+export const getPaymentStatusForMethod = (
+  paymentMethod: PaymentMethod,
+): PaymentStatus =>
+  isManualPayment(paymentMethod)
+    ? "verification_required"
+    : "pending_cod";
+
+export const getPaymentConfirmationMessage = (paymentMethod: PaymentMethod) =>
+  isManualPayment(paymentMethod)
+    ? "Your payment information has been submitted and is pending verification."
+    : "Your order has been received. We will contact you before delivery.";
 
 export const emptyCheckoutForm: CheckoutFormValues = {
   customerName: "",
@@ -34,7 +65,9 @@ const phonePattern = /^(?:\+?88)?01[3-9]\d{8}$/;
 export const formatPhoneNumber = (phone: string) =>
   phone.replace(/[\s-]/g, "");
 
-export const isManualPayment = (paymentMethod: PaymentMethod) =>
+export const isManualPayment = (
+  paymentMethod: PaymentMethod,
+): paymentMethod is Exclude<PaymentMethod, "cod"> =>
   paymentMethod === "bkash" || paymentMethod === "nagad";
 
 export const validateCheckoutForm = (

@@ -6,7 +6,11 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { paymentMethodLabels } from "@/lib/orders";
+import {
+  getPaymentConfirmationMessage,
+  paymentMethodLabels,
+  paymentStatusLabels,
+} from "@/lib/orders";
 import type { SavedOrder } from "@/types/order";
 
 export function OrderConfirmation() {
@@ -87,6 +91,13 @@ export function OrderConfirmation() {
     );
   }
 
+  const paymentStatus = order.payment.status
+    ? paymentStatusLabels[order.payment.status]
+    : "Pending";
+  const confirmationMessage = getPaymentConfirmationMessage(
+    order.payment.method,
+  );
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 14 }}
@@ -105,7 +116,7 @@ export function OrderConfirmation() {
               Thank you, {order.customer.customerName}.
             </h1>
             <p className="mt-4 text-base leading-8 text-muted">
-              Your order has been saved in Supabase. Order number:
+              {confirmationMessage} Order number:
               <span className="font-semibold text-charcoal">
                 {" "}
                 {order.orderNumber}
@@ -133,6 +144,19 @@ export function OrderConfirmation() {
             <p className="mt-2 text-sm font-semibold text-charcoal">
               {paymentMethodLabels[order.payment.method]}
             </p>
+            <p className="mt-2 text-sm text-muted">
+              Status: <span className="font-semibold">{paymentStatus}</span>
+            </p>
+            {order.payment.amount ? (
+              <p className="mt-2 text-sm text-muted">
+                Amount: BDT {order.payment.amount}
+              </p>
+            ) : null}
+            {order.payment.senderNumber ? (
+              <p className="mt-2 text-sm text-muted">
+                Sender: {order.payment.senderNumber}
+              </p>
+            ) : null}
             {order.payment.transactionId ? (
               <p className="mt-2 text-sm text-muted">
                 Transaction ID: {order.payment.transactionId}

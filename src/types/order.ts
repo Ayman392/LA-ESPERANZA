@@ -1,6 +1,18 @@
 import type { CartProductSize } from "@/types/cart";
 
 export type PaymentMethod = "cod" | "bkash" | "nagad";
+export type OrderStatus =
+  | "pending"
+  | "payment_verification"
+  | "confirmed"
+  | "processing"
+  | "completed"
+  | "cancelled";
+export type PaymentStatus =
+  | "pending_cod"
+  | "verification_required"
+  | "verified"
+  | "rejected";
 
 export type CheckoutFormValues = {
   customerName: string;
@@ -39,14 +51,20 @@ export type SavedOrder = {
   id?: string;
   orderNumber: string;
   customerId?: string;
+  status?: OrderStatus;
   customer: Pick<
     CheckoutFormValues,
     "customerName" | "phone" | "email" | "deliveryAddress" | "district" | "notes"
   >;
   payment: {
     method: PaymentMethod;
+    status?: PaymentStatus;
+    amount?: number;
     senderNumber?: string;
     transactionId?: string;
+    verifiedAt?: string;
+    verifiedBy?: string;
+    rejectionReason?: string;
   };
   items: OrderItem[];
   totals: OrderTotals;
