@@ -35,7 +35,9 @@ export type OrderTotals = {
 };
 
 export type SavedOrder = {
+  id?: string;
   orderNumber: string;
+  customerId?: string;
   customer: Pick<
     CheckoutFormValues,
     "customerName" | "phone" | "email" | "deliveryAddress" | "district" | "notes"
@@ -48,4 +50,11 @@ export type SavedOrder = {
   items: OrderItem[];
   totals: OrderTotals;
   createdAt: string;
+};
+
+export type CreateOrderPayload = {
+  customer: SavedOrder["customer"];
+  payment: SavedOrder["payment"];
+  items: OrderItem[];
+  totals: OrderTotals;
 };

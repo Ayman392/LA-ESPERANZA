@@ -2,14 +2,13 @@ import type { CartLineItem } from "@/types/cart";
 import type {
   CheckoutFormErrors,
   CheckoutFormValues,
+  CreateOrderPayload,
   OrderItem,
   OrderTotals,
   PaymentMethod,
   SavedOrder,
 } from "@/types/order";
 
-export const ORDERS_STORAGE_KEY = "la-esperanza-orders";
-export const LATEST_ORDER_STORAGE_KEY = "la-esperanza-latest-order";
 export const DELIVERY_CHARGE = 80;
 
 export const paymentMethodLabels: Record<PaymentMethod, string> = {
@@ -106,46 +105,51 @@ export const generateOrderNumber = () => {
   return `LE-${timestamp}-${suffix}`;
 };
 
-const readOrders = (): SavedOrder[] => {
-  if (typeof window === "undefined") {
-    return [];
-  }
+export const createOrderPayload = (
+  values: CheckoutFormValues,
+  lineItems: CartLineItem[],
+  subtotal: number,
+): CreateOrderPayload => {
+  const manualPayment = isManualPayment(values.paymentMethod);
 
-  try {
-    const storedOrders = JSON.parse(
-      window.localStorage.getItem(ORDERS_STORAGE_KEY) ?? "[]",
-    );
-
-    return Array.isArray(storedOrders) ? (storedOrders as SavedOrder[]) : [];
-  } catch {
-    return [];
-  }
+  return {
+    customer: {
+      customerName: values.customerName.trim(),
+      phone: formatPhoneNumber(values.phone),
+      email: values.email.trim(),
+      deliveryAddress: values.deliveryAddress.trim(),
+      district: values.district.trim(),
+      notes: values.notes.trim(),
+    },
+    payment: {
+      method: values.paymentMethod,
+      senderNumber: manualPayment
+        ? formatPhoneNumber(values.senderNumber)
+        : undefined,
+      transactionId: manualPayment ? values.transactionId.trim() : undefined,
+    },
+    items: createOrderItems(lineItems),
+    totals: calculateOrderTotals(subtotal),
+  };
 };
 
-export const getStoredOrders = () => readOrders();
+export const persistOrder = async (payload: CreateOrderPayload) => {
+  const response = await fetch("/api/orders", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
 
-export const getOrderByNumber = (orderNumber: string) =>
-  readOrders().find((order) => order.orderNumber === orderNumber);
+  const data = (await response.json()) as {
+    order?: SavedOrder;
+    error?: string;
+  };
 
-export const getLatestOrder = () => {
-  if (typeof window === "undefined") {
-    return null;
+  if (!response.ok || !data.order) {
+    throw new Error(data.error ?? "Unable to place order.");
   }
 
-  const latestOrderNumber = window.localStorage.getItem(LATEST_ORDER_STORAGE_KEY);
-
-  return latestOrderNumber ? getOrderByNumber(latestOrderNumber) ?? null : null;
-};
-
-export const saveOrder = (order: SavedOrder) => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const orders = readOrders();
-  window.localStorage.setItem(
-    ORDERS_STORAGE_KEY,
-    JSON.stringify([order, ...orders]),
-  );
-  window.localStorage.setItem(LATEST_ORDER_STORAGE_KEY, order.orderNumber);
+  return data.order;
 };

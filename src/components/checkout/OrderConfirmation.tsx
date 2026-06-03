@@ -6,23 +6,49 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { getLatestOrder, getOrderByNumber, paymentMethodLabels } from "@/lib/orders";
+import { paymentMethodLabels } from "@/lib/orders";
 import type { SavedOrder } from "@/types/order";
 
 export function OrderConfirmation() {
   const searchParams = useSearchParams();
   const requestedOrderNumber = searchParams.get("order");
   const [order, setOrder] = useState<SavedOrder | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const hydrationTimer = window.setTimeout(() => {
-      setOrder(
-        requestedOrderNumber
-          ? getOrderByNumber(requestedOrderNumber) ?? null
-          : getLatestOrder(),
-      );
-      setIsReady(true);
+      if (!requestedOrderNumber) {
+        setErrorMessage("Order number is missing.");
+        setIsReady(true);
+        return;
+      }
+
+      const loadOrder = async () => {
+        try {
+          const response = await fetch(
+            `/api/orders/${encodeURIComponent(requestedOrderNumber)}`,
+          );
+          const data = (await response.json()) as {
+            order?: SavedOrder;
+            error?: string;
+          };
+
+          if (!response.ok || !data.order) {
+            throw new Error(data.error ?? "Order not found.");
+          }
+
+          setOrder(data.order);
+        } catch (error) {
+          setErrorMessage(
+            error instanceof Error ? error.message : "Order not found.",
+          );
+        } finally {
+          setIsReady(true);
+        }
+      };
+
+      void loadOrder();
     }, 0);
 
     return () => window.clearTimeout(hydrationTimer);
@@ -39,7 +65,7 @@ export function OrderConfirmation() {
           Order not found
         </h1>
         <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted">
-          Place a new order from your cart to generate a confirmation.
+          {errorMessage || "Place a new order from your cart to generate a confirmation."}
         </p>
         <Link
           href="/shop"
@@ -79,7 +105,7 @@ export function OrderConfirmation() {
               Thank you, {order.customer.customerName}.
             </h1>
             <p className="mt-4 text-base leading-8 text-muted">
-              Your order has been saved locally. Order number:
+              Your order has been saved in Supabase. Order number:
               <span className="font-semibold text-charcoal">
                 {" "}
                 {order.orderNumber}

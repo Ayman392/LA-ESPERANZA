@@ -8,21 +8,17 @@ import { motion } from "framer-motion";
 import { CheckoutOrderSummary } from "@/components/checkout/CheckoutOrderSummary";
 import { useCart } from "@/hooks/useCart";
 import {
-  calculateOrderTotals,
-  createOrderItems,
+  createOrderPayload,
   emptyCheckoutForm,
-  formatPhoneNumber,
-  generateOrderNumber,
   isManualPayment,
   paymentMethodLabels,
-  saveOrder,
+  persistOrder,
   validateCheckoutForm,
 } from "@/lib/orders";
 import type {
   CheckoutFormErrors,
   CheckoutFormValues,
   PaymentMethod,
-  SavedOrder,
 } from "@/types/order";
 
 const districts = [
@@ -52,6 +48,8 @@ export function CheckoutForm() {
   const { lineItems, subtotal, isReady, clearCart } = useCart();
   const [values, setValues] = useState<CheckoutFormValues>(emptyCheckoutForm);
   const [errors, setErrors] = useState<CheckoutFormErrors>({});
+  const [submissionError, setSubmissionError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const hasCartItems = lineItems.length > 0;
   const showManualPaymentFields = isManualPayment(values.paymentMethod);
@@ -62,9 +60,10 @@ export function CheckoutForm() {
   ) => {
     setValues((currentValues) => ({ ...currentValues, [key]: value }));
     setErrors((currentErrors) => ({ ...currentErrors, [key]: undefined }));
+    setSubmissionError("");
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!hasCartItems) {
@@ -78,34 +77,25 @@ export function CheckoutForm() {
       return;
     }
 
-    const orderNumber = generateOrderNumber();
-    const order: SavedOrder = {
-      orderNumber,
-      customer: {
-        customerName: values.customerName.trim(),
-        phone: formatPhoneNumber(values.phone),
-        email: values.email.trim(),
-        deliveryAddress: values.deliveryAddress.trim(),
-        district: values.district.trim(),
-        notes: values.notes.trim(),
-      },
-      payment: {
-        method: values.paymentMethod,
-        senderNumber: showManualPaymentFields
-          ? formatPhoneNumber(values.senderNumber)
-          : undefined,
-        transactionId: showManualPaymentFields
-          ? values.transactionId.trim()
-          : undefined,
-      },
-      items: createOrderItems(lineItems),
-      totals: calculateOrderTotals(subtotal),
-      createdAt: new Date().toISOString(),
-    };
+    setIsSubmitting(true);
+    setSubmissionError("");
 
-    saveOrder(order);
-    clearCart();
-    router.push(`/order-confirmation?order=${orderNumber}`);
+    try {
+      const order = await persistOrder(
+        createOrderPayload(values, lineItems, subtotal),
+      );
+
+      clearCart();
+      router.push(`/order-confirmation?order=${order.orderNumber}`);
+    } catch (error) {
+      setSubmissionError(
+        error instanceof Error
+          ? error.message
+          : "Unable to place your order. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isReady && !hasCartItems) {
@@ -150,7 +140,7 @@ export function CheckoutForm() {
           </h1>
         </div>
 
-        {/* Customer fields are validated before the local order snapshot is saved. */}
+        {/* Customer fields are validated before the Supabase order snapshot is saved. */}
         <div className="mt-8 grid gap-5 sm:grid-cols-2">
           <label className={labelClass}>
             Customer Name
@@ -308,12 +298,21 @@ export function CheckoutForm() {
           </motion.div>
         ) : null}
 
+        {submissionError ? (
+          <div
+            role="alert"
+            className="mt-6 rounded-card border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800"
+          >
+            {submissionError}
+          </div>
+        ) : null}
+
         <button
           type="submit"
-          disabled={!hasCartItems}
+          disabled={!hasCartItems || isSubmitting}
           className="mt-8 inline-flex h-12 w-full items-center justify-center rounded-full bg-charcoal px-6 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
-          Place Order
+          {isSubmitting ? "Placing Order..." : "Place Order"}
         </button>
       </motion.section>
 
