@@ -120,7 +120,7 @@ const callAdminApi = async (path: string, init?: RequestInit) => {
   return data;
 };
 
-const buildDashboardSummary = (
+const calculateDashboardMetrics = (
   orders: AdminOrder[],
   payments: AdminPayment[],
 ): AdminDashboardSummary => ({
@@ -129,8 +129,20 @@ const buildDashboardSummary = (
     .filter((order) => order.status !== "cancelled")
     .reduce((total, order) => total + order.grandTotal, 0),
   pendingOrders: orders.filter((order) => order.status === "pending").length,
-  pendingPaymentVerifications: payments.length,
+  pendingPaymentVerifications: payments.filter((payment) => {
+    const relatedOrder = orders.find((order) => order.id === payment.orderId);
+
+    return (
+      payment.status === "verification_required" &&
+      (!relatedOrder || relatedOrder.status === "payment_verification")
+    );
+  }).length,
   recentOrders: orders.slice(0, 5),
+});
+
+const withDashboardMetrics = (currentData: AdminPayload): AdminPayload => ({
+  ...currentData,
+  dashboard: calculateDashboardMetrics(currentData.orders, currentData.payments),
 });
 
 const updateOrderStatusLocally = (
@@ -153,12 +165,7 @@ const updateOrderStatusLocally = (
     }),
   }));
 
-  return {
-    ...currentData,
-    orders,
-    customers,
-    dashboard: buildDashboardSummary(orders, currentData.payments),
-  };
+  return withDashboardMetrics({ ...currentData, orders, customers });
 };
 
 const removePaymentLocally = (
@@ -168,11 +175,10 @@ const removePaymentLocally = (
 ): AdminPayload => {
   const payment = currentData.payments.find((entry) => entry.id === paymentId);
   const payments = currentData.payments.filter((entry) => entry.id !== paymentId);
-  let nextData: AdminPayload = {
+  let nextData = withDashboardMetrics({
     ...currentData,
     payments,
-    dashboard: buildDashboardSummary(currentData.orders, payments),
-  };
+  });
 
   if (payment && nextOrderStatus) {
     nextData = updateOrderStatusLocally(
@@ -185,10 +191,7 @@ const removePaymentLocally = (
     );
   }
 
-  return {
-    ...nextData,
-    dashboard: buildDashboardSummary(nextData.orders, payments),
-  };
+  return withDashboardMetrics(nextData);
 };
 
 function useAdminDashboard() {
@@ -247,7 +250,7 @@ export function AdminDashboardProvider({
           throw new Error(payload.error ?? "Unable to load admin dashboard.");
         }
 
-        setData(payload);
+        setData(withDashboardMetrics(payload));
       } catch (error) {
         setMessage(
           error instanceof Error ? error.message : "Unable to load admin.",
@@ -295,12 +298,16 @@ export function AdminDashboardProvider({
     [data?.products],
   );
 
-  const metrics: Array<[string, string | number]> = data
+  const dashboardMetrics = data
+    ? calculateDashboardMetrics(data.orders, data.payments)
+    : null;
+
+  const metrics: Array<[string, string | number]> = dashboardMetrics
     ? [
-        ["Total Orders", data.dashboard.totalOrders],
-        ["Total Revenue", `BDT ${data.dashboard.totalRevenue}`],
-        ["Pending Orders", data.dashboard.pendingOrders],
-        ["Payment Checks", data.dashboard.pendingPaymentVerifications],
+        ["Total Orders", dashboardMetrics.totalOrders],
+        ["Total Revenue", `BDT ${dashboardMetrics.totalRevenue}`],
+        ["Pending Orders", dashboardMetrics.pendingOrders],
+        ["Payment Checks", dashboardMetrics.pendingPaymentVerifications],
       ]
     : [];
 
@@ -386,11 +393,10 @@ export function AdminDashboardProvider({
         const payments = current.payments.some((entry) => entry.id === payment.id)
           ? current.payments
           : [payment, ...current.payments];
-        let nextData: AdminPayload = {
+        let nextData = withDashboardMetrics({
           ...current,
           payments,
-          dashboard: buildDashboardSummary(current.orders, payments),
-        };
+        });
 
         if (previousOrderStatus && nextOrderStatus) {
           nextData = updateOrderStatusLocally(
@@ -400,10 +406,7 @@ export function AdminDashboardProvider({
           );
         }
 
-        return {
-          ...nextData,
-          dashboard: buildDashboardSummary(nextData.orders, payments),
-        };
+        return withDashboardMetrics(nextData);
       });
       setMessage(
         error instanceof Error ? error.message : "Unable to update payment.",
@@ -507,6 +510,10 @@ export function AdminDashboardProvider({
 
 export function AdminDashboardOverview() {
   const { data, message, metrics } = useAdminDashboard();
+  const recentOrders = calculateDashboardMetrics(
+    data.orders,
+    data.payments,
+  ).recentOrders;
 
   return (
     <AdminPageShell
@@ -532,7 +539,7 @@ export function AdminDashboardOverview() {
           );
         })}
       </div>
-      <AdminOrderList orders={data.dashboard.recentOrders} compact />
+      <AdminOrderList orders={recentOrders} compact />
     </AdminPageShell>
   );
 }
