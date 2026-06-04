@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   AlertTriangle,
   CreditCard,
@@ -13,40 +13,21 @@ import {
 import { clsx } from "clsx";
 
 const adminNavItems = [
-  { id: "overview", label: "Dashboard", icon: LayoutDashboard },
-  { id: "orders", label: "Orders", icon: ShoppingBag },
-  { id: "payments", label: "Payments", icon: CreditCard },
-  { id: "customers", label: "Customers", icon: Users },
-  { id: "products", label: "Products", icon: Package },
-  { id: "inventory", label: "Inventory", icon: AlertTriangle },
+  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/admin/payments", label: "Payments", icon: CreditCard },
+  { href: "/admin/customers", label: "Customers", icon: Users },
+  { href: "/admin/products", label: "Products", icon: Package },
+  { href: "/admin/inventory", label: "Inventory", icon: AlertTriangle },
 ];
-
-const getActiveSection = () => {
-  if (typeof window === "undefined") {
-    return "overview";
-  }
-
-  const hash = window.location.hash.replace("#", "");
-
-  return adminNavItems.some((item) => item.id === hash) ? hash : "overview";
-};
 
 export function AdminSidebarNav({
   variant = "desktop",
 }: {
   variant?: "desktop" | "mobile";
 }) {
-  const [activeSection, setActiveSection] = useState(getActiveSection);
+  const pathname = usePathname();
   const isDesktop = variant === "desktop";
-
-  useEffect(() => {
-    const syncActiveSection = () => setActiveSection(getActiveSection());
-
-    syncActiveSection();
-    window.addEventListener("hashchange", syncActiveSection);
-
-    return () => window.removeEventListener("hashchange", syncActiveSection);
-  }, []);
 
   return (
     <nav
@@ -57,14 +38,13 @@ export function AdminSidebarNav({
     >
       {adminNavItems.map((item) => {
         const Icon = item.icon;
-        const isActive = activeSection === item.id;
+        const isActive = pathname === item.href;
 
         return (
           <Link
-            key={item.id}
-            href={`/admin#${item.id}`}
+            key={item.href}
+            href={item.href}
             aria-current={isActive ? "page" : undefined}
-            onClick={() => setActiveSection(item.id)}
             className={clsx(
               "flex h-11 items-center gap-3 rounded-card text-sm font-semibold transition",
               isDesktop ? "px-3" : "shrink-0 border px-4",

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AdminDashboard } from "@/components/admin/AdminDashboard";
+import { redirect } from "next/navigation";
 import { AdminLogin } from "@/components/admin/AdminLogin";
 import { hasAdminSession } from "@/lib/admin-session";
 
@@ -11,5 +11,9 @@ export const metadata: Metadata = {
 export default async function Page() {
   const isLoggedIn = await hasAdminSession();
 
-  return isLoggedIn ? <AdminDashboard /> : <AdminLogin />;
+  if (isLoggedIn) {
+    redirect("/admin/dashboard");
+  }
+
+  return <AdminLogin />;
 }

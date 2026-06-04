@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminDashboardProvider } from "@/components/admin/AdminDashboard";
 import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
 import { AdminSidebarNav } from "@/components/admin/AdminSidebarNav";
 import { hasAdminSession } from "@/lib/admin-session";
@@ -15,7 +16,7 @@ export default async function AdminLayout({
       <div className="flex min-h-screen">
         {/* Admin routes use their own shell so public ecommerce chrome never appears here. */}
         <aside className="hidden w-[220px] shrink-0 border-r border-border bg-surface-strong/80 px-4 py-5 lg:flex lg:flex-col">
-          <Link href="/admin#overview" className="block rounded-card px-3 py-2">
+          <Link href="/admin/dashboard" className="block rounded-card px-3 py-2">
             <p className="whitespace-nowrap font-serif text-[21px] font-semibold leading-tight text-charcoal">
               LA ESPERANZA
             </p>
@@ -25,6 +26,12 @@ export default async function AdminLayout({
           </Link>
 
           {isLoggedIn ? <AdminSidebarNav /> : null}
+
+          {isLoggedIn ? (
+            <div className="mt-auto border-t border-border pt-4">
+              <AdminLogoutButton />
+            </div>
+          ) : null}
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -38,7 +45,11 @@ export default async function AdminLayout({
                   Separate dashboard workspace
                 </p>
               </div>
-              {isLoggedIn ? <AdminLogoutButton /> : null}
+              {isLoggedIn ? (
+                <div className="lg:hidden">
+                  <AdminLogoutButton />
+                </div>
+              ) : null}
             </div>
             {isLoggedIn ? (
               <div className="border-t border-border px-4 sm:px-6 lg:hidden">
@@ -47,7 +58,13 @@ export default async function AdminLayout({
             ) : null}
           </header>
 
-          <main className="flex-1 px-4 py-8 sm:px-6 lg:px-7">{children}</main>
+          <main className="flex-1 px-4 py-8 sm:px-6 lg:px-7">
+            {isLoggedIn ? (
+              <AdminDashboardProvider>{children}</AdminDashboardProvider>
+            ) : (
+              children
+            )}
+          </main>
         </div>
       </div>
     </section>
