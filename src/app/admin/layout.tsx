@@ -11,6 +11,14 @@ export default async function AdminLayout({
 }>) {
   const isLoggedIn = await hasAdminSession();
 
+  if (!isLoggedIn) {
+    return (
+      <section className="flex min-h-screen items-center justify-center bg-background px-4 py-12 text-charcoal">
+        {children}
+      </section>
+    );
+  }
+
   return (
     <section className="min-h-screen bg-background text-charcoal">
       <div className="flex min-h-screen">
@@ -25,13 +33,11 @@ export default async function AdminLayout({
             </p>
           </Link>
 
-          {isLoggedIn ? <AdminSidebarNav /> : null}
+          <AdminSidebarNav />
 
-          {isLoggedIn ? (
-            <div className="mt-auto border-t border-border pt-4">
-              <AdminLogoutButton />
-            </div>
-          ) : null}
+          <div className="mt-auto border-t border-border pt-4">
+            <AdminLogoutButton />
+          </div>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -45,25 +51,17 @@ export default async function AdminLayout({
                   Separate dashboard workspace
                 </p>
               </div>
-              {isLoggedIn ? (
-                <div className="lg:hidden">
-                  <AdminLogoutButton />
-                </div>
-              ) : null}
-            </div>
-            {isLoggedIn ? (
-              <div className="border-t border-border px-4 sm:px-6 lg:hidden">
-                <AdminSidebarNav variant="mobile" />
+              <div className="lg:hidden">
+                <AdminLogoutButton />
               </div>
-            ) : null}
+            </div>
+            <div className="border-t border-border px-4 sm:px-6 lg:hidden">
+              <AdminSidebarNav variant="mobile" />
+            </div>
           </header>
 
           <main className="flex-1 px-4 py-8 sm:px-6 lg:px-7">
-            {isLoggedIn ? (
-              <AdminDashboardProvider>{children}</AdminDashboardProvider>
-            ) : (
-              children
-            )}
+            <AdminDashboardProvider>{children}</AdminDashboardProvider>
           </main>
         </div>
       </div>

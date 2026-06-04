@@ -16,6 +16,7 @@ export function AdminLogoutButton() {
         method: "POST",
         credentials: "same-origin",
       });
+      router.replace("/admin");
       router.refresh();
     } finally {
       setIsLoggingOut(false);
