@@ -58,6 +58,15 @@ const metricIcons = [ShoppingBag, CreditCard, Package, Users];
 const inputClass =
   "h-11 rounded-card border border-border bg-background px-3 text-sm text-charcoal outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20";
 
+class AdminApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 const callAdminApi = async (path: string, init?: RequestInit) => {
   const response = await fetch(path, {
     ...init,
@@ -69,7 +78,7 @@ const callAdminApi = async (path: string, init?: RequestInit) => {
   const data = (await response.json()) as { error?: string };
 
   if (!response.ok) {
-    throw new Error(data.error ?? "Admin request failed.");
+    throw new AdminApiError(data.error ?? "Admin request failed.", response.status);
   }
 
   return data;
@@ -88,6 +97,8 @@ export function AdminDashboard() {
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [updatingPaymentId, setUpdatingPaymentId] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async () => {
     setIsLoading(true);
@@ -151,6 +162,76 @@ export function AdminDashboard() {
       ]
     : [];
 
+  const buildDashboardSummary = (
+    orders: AdminOrder[],
+    payments: AdminPayment[],
+  ): AdminDashboardSummary => ({
+    totalOrders: orders.length,
+    totalRevenue: orders
+      .filter((order) => order.status !== "cancelled")
+      .reduce((total, order) => total + order.grandTotal, 0),
+    pendingOrders: orders.filter((order) => order.status === "pending").length,
+    pendingPaymentVerifications: payments.length,
+    recentOrders: orders.slice(0, 5),
+  });
+
+  const updateOrderStatusLocally = (
+    currentData: AdminPayload,
+    orderId: string,
+    status: AdminOrderStatus,
+  ): AdminPayload => {
+    const orders = currentData.orders.map((order) =>
+      order.id === orderId ? { ...order, status } : order,
+    );
+    const customers = currentData.customers.map((customer) => ({
+      ...customer,
+      orders: customer.orders.map((order) => {
+        const matchingOrder = currentData.orders.find(
+          (entry) => entry.id === orderId && entry.orderNumber === order.orderNumber,
+        );
+
+        return matchingOrder ? { ...order, status } : order;
+      }),
+    }));
+
+    return {
+      ...currentData,
+      orders,
+      customers,
+      dashboard: buildDashboardSummary(orders, currentData.payments),
+    };
+  };
+
+  const removePaymentLocally = (
+    currentData: AdminPayload,
+    paymentId: string,
+    nextOrderStatus?: AdminOrderStatus,
+  ): AdminPayload => {
+    const payment = currentData.payments.find((entry) => entry.id === paymentId);
+    const payments = currentData.payments.filter((entry) => entry.id !== paymentId);
+    let nextData: AdminPayload = {
+      ...currentData,
+      payments,
+      dashboard: buildDashboardSummary(currentData.orders, payments),
+    };
+
+    if (payment && nextOrderStatus) {
+      nextData = updateOrderStatusLocally(
+        {
+          ...nextData,
+          payments,
+        },
+        payment.orderId,
+        nextOrderStatus,
+      );
+    }
+
+    return {
+      ...nextData,
+      dashboard: buildDashboardSummary(nextData.orders, payments),
+    };
+  };
+
   const refreshAfter = async (action: () => Promise<void>) => {
     setMessage("");
     try {
@@ -161,6 +242,70 @@ export function AdminDashboard() {
         error instanceof Error ? error.message : "Admin action failed.",
       );
       router.refresh();
+    }
+  };
+
+  const updateOrderStatus = async (
+    orderId: string,
+    status: AdminOrderStatus,
+  ) => {
+    if (!data || updatingOrderId) {
+      return;
+    }
+
+    const previousData = data;
+    setMessage("");
+    setUpdatingOrderId(orderId);
+    setData(updateOrderStatusLocally(data, orderId, status));
+
+    try {
+      await callAdminApi(`/api/admin/orders/${orderId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+    } catch (error) {
+      setData(previousData);
+      setMessage(
+        error instanceof Error ? error.message : "Unable to update order.",
+      );
+      if (error instanceof AdminApiError && error.status === 401) {
+        router.refresh();
+      }
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
+  const updatePayment = async (
+    payment: AdminPayment,
+    action: "verify" | "reject",
+    rejectionReason?: string,
+  ) => {
+    if (!data || updatingPaymentId) {
+      return;
+    }
+
+    const previousData = data;
+    const nextOrderStatus = action === "verify" ? "processing" : undefined;
+    setMessage("");
+    setUpdatingPaymentId(payment.id);
+    setData(removePaymentLocally(data, payment.id, nextOrderStatus));
+
+    try {
+      await callAdminApi(`/api/admin/payments/${payment.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ action, rejectionReason }),
+      });
+    } catch (error) {
+      setData(previousData);
+      setMessage(
+        error instanceof Error ? error.message : "Unable to update payment.",
+      );
+      if (error instanceof AdminApiError && error.status === 401) {
+        router.refresh();
+      }
+    } finally {
+      setUpdatingPaymentId(null);
     }
   };
 
@@ -318,14 +463,8 @@ export function AdminDashboard() {
           </div>
           <AdminOrderList
             orders={filteredOrders}
-            onStatusChange={(orderId, status) =>
-              refreshAfter(() =>
-                callAdminApi(`/api/admin/orders/${orderId}`, {
-                  method: "PATCH",
-                  body: JSON.stringify({ status }),
-                }).then(() => undefined),
-              )
-            }
+            updatingOrderId={updatingOrderId}
+            onStatusChange={(orderId, status) => void updateOrderStatus(orderId, status)}
           />
         </section>
       ) : null}
@@ -359,37 +498,24 @@ export function AdminDashboard() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() =>
-                        refreshAfter(() =>
-                          callAdminApi(`/api/admin/payments/${payment.id}`, {
-                            method: "PATCH",
-                            body: JSON.stringify({ action: "verify" }),
-                          }).then(() => undefined),
-                        )
-                      }
-                      className="h-10 rounded-full bg-charcoal px-4 text-sm font-semibold text-white"
+                      disabled={updatingPaymentId === payment.id}
+                      onClick={() => void updatePayment(payment, "verify")}
+                      className="h-10 rounded-full bg-charcoal px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Verify
+                      {updatingPaymentId === payment.id ? "Saving..." : "Verify"}
                     </button>
                     <button
                       type="button"
+                      disabled={updatingPaymentId === payment.id}
                       onClick={() => {
                         const rejectionReason = window.prompt(
                           "Enter rejection reason",
                         );
                         if (rejectionReason) {
-                          void refreshAfter(() =>
-                            callAdminApi(`/api/admin/payments/${payment.id}`, {
-                              method: "PATCH",
-                              body: JSON.stringify({
-                                action: "reject",
-                                rejectionReason,
-                              }),
-                            }).then(() => undefined),
-                          );
+                          void updatePayment(payment, "reject", rejectionReason);
                         }
                       }}
-                      className="h-10 rounded-full border border-border bg-background px-4 text-sm font-semibold text-charcoal"
+                      className="h-10 rounded-full border border-border bg-background px-4 text-sm font-semibold text-charcoal disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Reject
                     </button>
@@ -482,10 +608,12 @@ export function AdminDashboard() {
 function AdminOrderList({
   orders,
   compact = false,
+  updatingOrderId,
   onStatusChange,
 }: {
   orders: AdminOrder[];
   compact?: boolean;
+  updatingOrderId?: string | null;
   onStatusChange?: (orderId: string, status: AdminOrderStatus) => void;
 }) {
   if (orders.length === 0) {
@@ -515,19 +643,27 @@ function AdminOrderList({
             BDT {order.grandTotal}
           </p>
           {onStatusChange ? (
-            <select
-              value={order.status}
-              onChange={(event) =>
-                onStatusChange(order.id, event.target.value as AdminOrderStatus)
-              }
-              className={inputClass}
-            >
-              {orderStatuses.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
+            <div className="space-y-2">
+              <select
+                value={order.status}
+                disabled={updatingOrderId === order.id}
+                onChange={(event) =>
+                  onStatusChange(order.id, event.target.value as AdminOrderStatus)
+                }
+                className={`${inputClass} w-full disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                {orderStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+              {updatingOrderId === order.id ? (
+                <p className="text-xs font-semibold uppercase text-accent">
+                  Saving...
+                </p>
+              ) : null}
+            </div>
           ) : (
             <p className="text-sm font-semibold text-accent">{order.status}</p>
           )}
