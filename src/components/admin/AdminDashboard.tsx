@@ -31,6 +31,17 @@ type AdminPayload = {
   products: AdminProduct[];
 };
 
+const adminTabs = [
+  "overview",
+  "orders",
+  "payments",
+  "customers",
+  "products",
+  "inventory",
+] as const;
+
+type AdminTab = (typeof adminTabs)[number];
+
 const orderStatuses: AdminOrderStatus[] = [
   "pending",
   "payment_verification",
@@ -56,6 +67,16 @@ const metricIcons = [ShoppingBag, CreditCard, Package, Users];
 
 const inputClass =
   "h-11 rounded-card border border-border bg-background px-3 text-sm text-charcoal outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20";
+
+const getActiveAdminTab = (): AdminTab => {
+  if (typeof window === "undefined") {
+    return "overview";
+  }
+
+  const hash = window.location.hash.replace("#", "");
+
+  return adminTabs.includes(hash as AdminTab) ? (hash as AdminTab) : "overview";
+};
 
 class AdminApiError extends Error {
   status: number;
@@ -87,7 +108,7 @@ const callAdminApi = async (path: string, init?: RequestInit) => {
 export function AdminDashboard() {
   const router = useRouter();
   const [data, setData] = useState<AdminPayload | null>(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState<AdminTab>(getActiveAdminTab);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | AdminOrderStatus>(
     "all",
@@ -142,6 +163,15 @@ export function AdminDashboard() {
 
     return () => window.clearTimeout(loadTimer);
   }, [loadDashboard]);
+
+  useEffect(() => {
+    const syncActiveTab = () => setActiveTab(getActiveAdminTab());
+
+    syncActiveTab();
+    window.addEventListener("hashchange", syncActiveTab);
+
+    return () => window.removeEventListener("hashchange", syncActiveTab);
+  }, []);
 
   const filteredOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -382,6 +412,21 @@ export function AdminDashboard() {
     });
   };
 
+  const selectAdminTab = (tab: AdminTab) => {
+    setActiveTab(tab);
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${window.location.search}#${tab}`,
+    );
+    window.dispatchEvent(new Event("hashchange"));
+  };
+
   if (isLoading) {
     return (
       <div className="rounded-card border border-border bg-surface-strong px-6 py-16 text-center shadow-soft">
@@ -427,12 +472,12 @@ export function AdminDashboard() {
       ) : null}
 
       <nav className="flex flex-wrap gap-2">
-        {["overview", "orders", "payments", "customers", "products", "inventory"].map(
+        {adminTabs.map(
           (tab) => (
             <button
               key={tab}
               type="button"
-              onClick={() => setActiveTab(tab)}
+              onClick={() => selectAdminTab(tab)}
               className={`h-10 rounded-full px-4 text-sm font-semibold transition ${
                 activeTab === tab
                   ? "bg-charcoal text-white"
