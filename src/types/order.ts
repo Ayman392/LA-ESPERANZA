@@ -6,6 +6,8 @@ export type OrderStatus =
   | "payment_verification"
   | "confirmed"
   | "processing"
+  | "shipped"
+  | "delivered"
   | "completed"
   | "cancelled";
 export type PaymentStatus =
