@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -70,6 +70,7 @@ class AdminApiError extends Error {
 const callAdminApi = async (path: string, init?: RequestInit) => {
   const response = await fetch(path, {
     ...init,
+    credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
       ...init?.headers,
@@ -97,8 +98,13 @@ export function AdminDashboard() {
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
-  const [updatingPaymentId, setUpdatingPaymentId] = useState<string | null>(null);
+  const [updatingOrderIds, setUpdatingOrderIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [updatingPaymentIds, setUpdatingPaymentIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const hasLoadedDashboard = useRef(false);
 
   const loadDashboard = useCallback(async () => {
     setIsLoading(true);
@@ -126,6 +132,11 @@ export function AdminDashboard() {
   }, [router]);
 
   useEffect(() => {
+    if (hasLoadedDashboard.current) {
+      return;
+    }
+
+    hasLoadedDashboard.current = true;
     const loadTimer = window.setTimeout(() => {
       void loadDashboard();
     }, 0);
@@ -249,14 +260,22 @@ export function AdminDashboard() {
     orderId: string,
     status: AdminOrderStatus,
   ) => {
-    if (!data || updatingOrderId) {
+    const previousStatus = data?.orders.find((order) => order.id === orderId)
+      ?.status;
+
+    if (!data || !previousStatus || updatingOrderIds.has(orderId)) {
       return;
     }
 
-    const previousData = data;
     setMessage("");
-    setUpdatingOrderId(orderId);
-    setData(updateOrderStatusLocally(data, orderId, status));
+    setUpdatingOrderIds((current) => {
+      const next = new Set(current);
+      next.add(orderId);
+      return next;
+    });
+    setData((current) =>
+      current ? updateOrderStatusLocally(current, orderId, status) : current,
+    );
 
     try {
       await callAdminApi(`/api/admin/orders/${orderId}`, {
@@ -264,15 +283,20 @@ export function AdminDashboard() {
         body: JSON.stringify({ status }),
       });
     } catch (error) {
-      setData(previousData);
+      setData((current) =>
+        current
+          ? updateOrderStatusLocally(current, orderId, previousStatus)
+          : current,
+      );
       setMessage(
         error instanceof Error ? error.message : "Unable to update order.",
       );
-      if (error instanceof AdminApiError && error.status === 401) {
-        router.refresh();
-      }
     } finally {
-      setUpdatingOrderId(null);
+      setUpdatingOrderIds((current) => {
+        const next = new Set(current);
+        next.delete(orderId);
+        return next;
+      });
     }
   };
 
@@ -281,15 +305,24 @@ export function AdminDashboard() {
     action: "verify" | "reject",
     rejectionReason?: string,
   ) => {
-    if (!data || updatingPaymentId) {
+    const previousOrderStatus = data?.orders.find(
+      (order) => order.id === payment.orderId,
+    )?.status;
+
+    if (!data || updatingPaymentIds.has(payment.id)) {
       return;
     }
 
-    const previousData = data;
     const nextOrderStatus = action === "verify" ? "processing" : undefined;
     setMessage("");
-    setUpdatingPaymentId(payment.id);
-    setData(removePaymentLocally(data, payment.id, nextOrderStatus));
+    setUpdatingPaymentIds((current) => {
+      const next = new Set(current);
+      next.add(payment.id);
+      return next;
+    });
+    setData((current) =>
+      current ? removePaymentLocally(current, payment.id, nextOrderStatus) : current,
+    );
 
     try {
       await callAdminApi(`/api/admin/payments/${payment.id}`, {
@@ -297,15 +330,42 @@ export function AdminDashboard() {
         body: JSON.stringify({ action, rejectionReason }),
       });
     } catch (error) {
-      setData(previousData);
+      setData((current) => {
+        if (!current) {
+          return current;
+        }
+
+        const payments = current.payments.some((entry) => entry.id === payment.id)
+          ? current.payments
+          : [payment, ...current.payments];
+        let nextData: AdminPayload = {
+          ...current,
+          payments,
+          dashboard: buildDashboardSummary(current.orders, payments),
+        };
+
+        if (previousOrderStatus && nextOrderStatus) {
+          nextData = updateOrderStatusLocally(
+            nextData,
+            payment.orderId,
+            previousOrderStatus,
+          );
+        }
+
+        return {
+          ...nextData,
+          dashboard: buildDashboardSummary(nextData.orders, payments),
+        };
+      });
       setMessage(
         error instanceof Error ? error.message : "Unable to update payment.",
       );
-      if (error instanceof AdminApiError && error.status === 401) {
-        router.refresh();
-      }
     } finally {
-      setUpdatingPaymentId(null);
+      setUpdatingPaymentIds((current) => {
+        const next = new Set(current);
+        next.delete(payment.id);
+        return next;
+      });
     }
   };
 
@@ -463,7 +523,7 @@ export function AdminDashboard() {
           </div>
           <AdminOrderList
             orders={filteredOrders}
-            updatingOrderId={updatingOrderId}
+            updatingOrderIds={updatingOrderIds}
             onStatusChange={(orderId, status) => void updateOrderStatus(orderId, status)}
           />
         </section>
@@ -474,55 +534,66 @@ export function AdminDashboard() {
           {data.payments.length === 0 ? (
             <EmptyState title="No pending manual payments" />
           ) : (
-            data.payments.map((payment) => (
-              <article
-                key={payment.id}
-                className="rounded-card border border-border bg-surface-strong p-5 shadow-soft"
-              >
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold uppercase text-accent">
-                      {paymentMethodLabels[payment.method]} | {payment.orderNumber}
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold text-charcoal">
-                      BDT {payment.amount}
-                    </p>
-                    <p className="mt-3 text-sm text-muted">
-                      Sender: {payment.senderNumber} | Transaction:{" "}
-                      {payment.transactionId}
-                    </p>
-                    <p className="mt-2 text-sm text-muted">
-                      Status: {paymentStatusLabels[payment.status]}
-                    </p>
+            data.payments.map((payment) => {
+              const isUpdatingPayment = updatingPaymentIds.has(payment.id);
+
+              return (
+                <article
+                  key={payment.id}
+                  className="rounded-card border border-border bg-surface-strong p-5 shadow-soft"
+                >
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold uppercase text-accent">
+                        {paymentMethodLabels[payment.method]} | {payment.orderNumber}
+                      </p>
+                      <p className="mt-2 text-2xl font-semibold text-charcoal">
+                        BDT {payment.amount}
+                      </p>
+                      <p className="mt-3 text-sm text-muted">
+                        Sender: {payment.senderNumber} | Transaction:{" "}
+                        {payment.transactionId}
+                      </p>
+                      <p className="mt-2 text-sm text-muted">
+                        Status: {paymentStatusLabels[payment.status]}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-start gap-2 md:items-end">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={isUpdatingPayment}
+                          onClick={() => void updatePayment(payment, "verify")}
+                          className="h-10 rounded-full bg-charcoal px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Verify
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isUpdatingPayment}
+                          onClick={() => {
+                            const rejectionReason = window.prompt(
+                              "Enter rejection reason",
+                            );
+                            if (rejectionReason) {
+                              void updatePayment(payment, "reject", rejectionReason);
+                            }
+                          }}
+                          className="h-10 rounded-full border border-border bg-background px-4 text-sm font-semibold text-charcoal disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                      {isUpdatingPayment ? (
+                        <p className="text-xs font-semibold uppercase text-accent">
+                          Saving...
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      disabled={updatingPaymentId === payment.id}
-                      onClick={() => void updatePayment(payment, "verify")}
-                      className="h-10 rounded-full bg-charcoal px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {updatingPaymentId === payment.id ? "Saving..." : "Verify"}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={updatingPaymentId === payment.id}
-                      onClick={() => {
-                        const rejectionReason = window.prompt(
-                          "Enter rejection reason",
-                        );
-                        if (rejectionReason) {
-                          void updatePayment(payment, "reject", rejectionReason);
-                        }
-                      }}
-                      className="h-10 rounded-full border border-border bg-background px-4 text-sm font-semibold text-charcoal disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))
+                </article>
+              );
+            })
           )}
         </section>
       ) : null}
@@ -608,12 +679,12 @@ export function AdminDashboard() {
 function AdminOrderList({
   orders,
   compact = false,
-  updatingOrderId,
+  updatingOrderIds,
   onStatusChange,
 }: {
   orders: AdminOrder[];
   compact?: boolean;
-  updatingOrderId?: string | null;
+  updatingOrderIds?: Set<string>;
   onStatusChange?: (orderId: string, status: AdminOrderStatus) => void;
 }) {
   if (orders.length === 0) {
@@ -622,53 +693,59 @@ function AdminOrderList({
 
   return (
     <div className="overflow-hidden rounded-card border border-border bg-surface-strong shadow-soft">
-      {orders.map((order) => (
-        <div
-          key={order.id}
-          className="grid gap-4 border-b border-border p-4 last:border-b-0 md:grid-cols-[1fr_9rem_12rem]"
-        >
-          <div>
-            <p className="font-semibold text-charcoal">{order.orderNumber}</p>
-            <p className="mt-1 text-sm text-muted">
-              {order.customerName} | {order.customerPhone}
-            </p>
-            {!compact && order.paymentMethod ? (
-              <p className="mt-1 text-xs text-muted">
-                {paymentMethodLabels[order.paymentMethod]} |{" "}
-                {order.paymentStatus ? paymentStatusLabels[order.paymentStatus] : "Pending"}
+      {orders.map((order) => {
+        const isUpdatingOrder = updatingOrderIds?.has(order.id) ?? false;
+
+        return (
+          <div
+            key={order.id}
+            className="grid gap-4 border-b border-border p-4 last:border-b-0 md:grid-cols-[1fr_9rem_12rem]"
+          >
+            <div>
+              <p className="font-semibold text-charcoal">{order.orderNumber}</p>
+              <p className="mt-1 text-sm text-muted">
+                {order.customerName} | {order.customerPhone}
               </p>
-            ) : null}
-          </div>
-          <p className="text-sm font-semibold text-charcoal">
-            BDT {order.grandTotal}
-          </p>
-          {onStatusChange ? (
-            <div className="space-y-2">
-              <select
-                value={order.status}
-                disabled={updatingOrderId === order.id}
-                onChange={(event) =>
-                  onStatusChange(order.id, event.target.value as AdminOrderStatus)
-                }
-                className={`${inputClass} w-full disabled:cursor-not-allowed disabled:opacity-60`}
-              >
-                {orderStatuses.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-              {updatingOrderId === order.id ? (
-                <p className="text-xs font-semibold uppercase text-accent">
-                  Saving...
+              {!compact && order.paymentMethod ? (
+                <p className="mt-1 text-xs text-muted">
+                  {paymentMethodLabels[order.paymentMethod]} |{" "}
+                  {order.paymentStatus
+                    ? paymentStatusLabels[order.paymentStatus]
+                    : "Pending"}
                 </p>
               ) : null}
             </div>
-          ) : (
-            <p className="text-sm font-semibold text-accent">{order.status}</p>
-          )}
-        </div>
-      ))}
+            <p className="text-sm font-semibold text-charcoal">
+              BDT {order.grandTotal}
+            </p>
+            {onStatusChange ? (
+              <div className="space-y-2">
+                <select
+                  value={order.status}
+                  disabled={isUpdatingOrder}
+                  onChange={(event) =>
+                    onStatusChange(order.id, event.target.value as AdminOrderStatus)
+                  }
+                  className={`${inputClass} w-full disabled:cursor-not-allowed disabled:opacity-60`}
+                >
+                  {orderStatuses.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+                {isUpdatingOrder ? (
+                  <p className="text-xs font-semibold uppercase text-accent">
+                    Saving...
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-sm font-semibold text-accent">{order.status}</p>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
