@@ -9,7 +9,6 @@ import {
   CreditCard,
   Package,
   Search,
-  Shield,
   ShoppingBag,
   Users,
 } from "lucide-react";
@@ -369,14 +368,6 @@ export function AdminDashboard() {
     }
   };
 
-  const logout = async () => {
-    await fetch("/api/admin/logout", {
-      method: "POST",
-      credentials: "same-origin",
-    });
-    router.refresh();
-  };
-
   const saveProduct = async () => {
     await refreshAfter(async () => {
       const path = editingProductId
@@ -426,19 +417,6 @@ export function AdminDashboard() {
           <h1 className="mt-3 font-serif text-5xl font-semibold text-charcoal md:text-6xl">
             LA ESPERANZA operations
           </h1>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-strong px-4 py-2 text-sm font-semibold text-charcoal">
-            <Shield aria-hidden className="h-4 w-4 text-accent" />
-            Secure admin session
-          </div>
-          <button
-            type="button"
-            onClick={() => void logout()}
-            className="h-10 rounded-full border border-border bg-surface-strong px-4 text-sm font-semibold text-charcoal transition hover:border-accent/45 hover:bg-white"
-          >
-            Logout
-          </button>
         </div>
       </header>
 
