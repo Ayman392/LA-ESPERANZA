@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -12,7 +13,6 @@ import {
   ShoppingBag,
   Users,
 } from "lucide-react";
-import { getAdminRequestHeaders } from "@/lib/admin-auth";
 import { paymentMethodLabels, paymentStatusLabels } from "@/lib/orders";
 import type {
   AdminCustomer,
@@ -30,7 +30,6 @@ type AdminPayload = {
   payments: AdminPayment[];
   customers: AdminCustomer[];
   products: AdminProduct[];
-  accessMode: "key" | "phase8-placeholder";
 };
 
 const orderStatuses: AdminOrderStatus[] = [
@@ -64,7 +63,6 @@ const callAdminApi = async (path: string, init?: RequestInit) => {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      ...getAdminRequestHeaders(),
       ...init?.headers,
     },
   });
@@ -78,6 +76,7 @@ const callAdminApi = async (path: string, init?: RequestInit) => {
 };
 
 export function AdminDashboard() {
+  const router = useRouter();
   const [data, setData] = useState<AdminPayload | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [search, setSearch] = useState("");
@@ -90,17 +89,20 @@ export function AdminDashboard() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadDashboard = async () => {
+  const loadDashboard = useCallback(async () => {
     setIsLoading(true);
     setMessage("");
 
     try {
       const response = await fetch("/api/admin/dashboard", {
-        headers: getAdminRequestHeaders(),
+        credentials: "same-origin",
       });
       const payload = (await response.json()) as AdminPayload & { error?: string };
 
       if (!response.ok) {
+        if (response.status === 401) {
+          router.refresh();
+        }
         throw new Error(payload.error ?? "Unable to load admin dashboard.");
       }
 
@@ -110,7 +112,7 @@ export function AdminDashboard() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     const loadTimer = window.setTimeout(() => {
@@ -118,7 +120,7 @@ export function AdminDashboard() {
     }, 0);
 
     return () => window.clearTimeout(loadTimer);
-  }, []);
+  }, [loadDashboard]);
 
   const filteredOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -151,8 +153,23 @@ export function AdminDashboard() {
 
   const refreshAfter = async (action: () => Promise<void>) => {
     setMessage("");
-    await action();
-    await loadDashboard();
+    try {
+      await action();
+      await loadDashboard();
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Admin action failed.",
+      );
+      router.refresh();
+    }
+  };
+
+  const logout = async () => {
+    await fetch("/api/admin/logout", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+    router.refresh();
   };
 
   const saveProduct = async () => {
@@ -205,9 +222,18 @@ export function AdminDashboard() {
             LA ESPERANZA operations
           </h1>
         </div>
-        <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-strong px-4 py-2 text-sm font-semibold text-charcoal">
-          <Shield aria-hidden className="h-4 w-4 text-accent" />
-          {data.accessMode === "key" ? "Access key protected" : "Phase 8 auth-ready"}
+        <div className="flex flex-wrap gap-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-strong px-4 py-2 text-sm font-semibold text-charcoal">
+            <Shield aria-hidden className="h-4 w-4 text-accent" />
+            Secure admin session
+          </div>
+          <button
+            type="button"
+            onClick={() => void logout()}
+            className="h-10 rounded-full border border-border bg-surface-strong px-4 text-sm font-semibold text-charcoal transition hover:border-accent/45 hover:bg-white"
+          >
+            Logout
+          </button>
         </div>
       </header>
 

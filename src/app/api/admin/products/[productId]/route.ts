@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { assertAdminAccess } from "@/lib/admin-auth";
+import { NextRequest, NextResponse } from "next/server";
+import { assertAdminAccess } from "@/lib/admin-session";
 import {
   deleteAdminProduct,
   updateAdminProduct,
@@ -7,11 +7,11 @@ import {
 import type { AdminProductInput } from "@/types/admin";
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ productId: string }> },
 ) {
   try {
-    assertAdminAccess(request.headers);
+    assertAdminAccess(request);
     const { productId } = await context.params;
     const product = (await request.json()) as AdminProductInput;
 
@@ -24,17 +24,17 @@ export async function PATCH(
         error:
           error instanceof Error ? error.message : "Unable to update product.",
       },
-      { status: error instanceof Error && error.message.includes("denied") ? 401 : 500 },
+      { status: error instanceof Error && error.message.includes("Admin session") ? 401 : 500 },
     );
   }
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ productId: string }> },
 ) {
   try {
-    assertAdminAccess(request.headers);
+    assertAdminAccess(request);
     const { productId } = await context.params;
 
     await deleteAdminProduct(productId);
@@ -46,7 +46,7 @@ export async function DELETE(
         error:
           error instanceof Error ? error.message : "Unable to delete product.",
       },
-      { status: error instanceof Error && error.message.includes("denied") ? 401 : 500 },
+      { status: error instanceof Error && error.message.includes("Admin session") ? 401 : 500 },
     );
   }
 }

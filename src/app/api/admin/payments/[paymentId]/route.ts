@@ -1,16 +1,16 @@
-import { NextResponse } from "next/server";
-import { assertAdminAccess } from "@/lib/admin-auth";
+import { NextRequest, NextResponse } from "next/server";
+import { assertAdminAccess } from "@/lib/admin-session";
 import {
   rejectAdminPayment,
   verifyAdminPayment,
 } from "@/services/admin-dashboard";
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ paymentId: string }> },
 ) {
   try {
-    assertAdminAccess(request.headers);
+    assertAdminAccess(request);
     const { paymentId } = await context.params;
     const body = (await request.json()) as {
       action?: "verify" | "reject";
@@ -41,7 +41,7 @@ export async function PATCH(
         error:
           error instanceof Error ? error.message : "Unable to update payment.",
       },
-      { status: error instanceof Error && error.message.includes("denied") ? 401 : 500 },
+      { status: error instanceof Error && error.message.includes("Admin session") ? 401 : 500 },
     );
   }
 }

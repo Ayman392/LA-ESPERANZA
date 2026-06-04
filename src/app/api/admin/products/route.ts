@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
-import { assertAdminAccess } from "@/lib/admin-auth";
+import { NextRequest, NextResponse } from "next/server";
+import { assertAdminAccess } from "@/lib/admin-session";
 import { createAdminProduct } from "@/services/admin-dashboard";
 import type { AdminProductInput } from "@/types/admin";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    assertAdminAccess(request.headers);
+    assertAdminAccess(request);
     const product = (await request.json()) as AdminProductInput;
 
     await createAdminProduct(product);
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
         error:
           error instanceof Error ? error.message : "Unable to create product.",
       },
-      { status: error instanceof Error && error.message.includes("denied") ? 401 : 500 },
+      { status: error instanceof Error && error.message.includes("Admin session") ? 401 : 500 },
     );
   }
 }
