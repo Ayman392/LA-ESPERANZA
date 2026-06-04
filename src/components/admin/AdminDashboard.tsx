@@ -16,10 +16,13 @@ import {
   CheckCircle2,
   CreditCard,
   Package,
+  RefreshCw,
   Search,
   ShoppingBag,
   Users,
 } from "lucide-react";
+import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
+import { AdminSidebarNav } from "@/components/admin/AdminSidebarNav";
 import { paymentMethodLabels, paymentStatusLabels } from "@/lib/orders";
 import type {
   AdminCustomer,
@@ -29,6 +32,7 @@ import type {
   AdminPayment,
   AdminProduct,
   AdminProductInput,
+  AdminSection,
 } from "@/types/admin";
 
 type AdminPayload = {
@@ -42,6 +46,9 @@ type AdminPayload = {
 type AdminContextValue = {
   data: AdminPayload;
   message: string;
+  activeSection: AdminSection;
+  setActiveSection: (section: AdminSection) => void;
+  isRefreshing: boolean;
   filteredOrders: AdminOrder[];
   lowStockProducts: AdminProduct[];
   metrics: Array<[string, string | number]>;
@@ -61,6 +68,7 @@ type AdminContextValue = {
     action: "verify" | "reject",
     rejectionReason?: string,
   ) => Promise<void>;
+  refreshDashboard: () => Promise<void>;
   saveProduct: () => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
 };
@@ -211,6 +219,8 @@ export function AdminDashboardProvider({
 }) {
   const router = useRouter();
   const [data, setData] = useState<AdminPayload | null>(null);
+  const [activeSection, setActiveSection] =
+    useState<AdminSection>("dashboard");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | AdminOrderStatus>(
     "all",
@@ -220,6 +230,7 @@ export function AdminDashboardProvider({
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [updatingOrderIds, setUpdatingOrderIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -229,11 +240,17 @@ export function AdminDashboardProvider({
   const hasLoadedDashboard = useRef(false);
 
   const loadDashboard = useCallback(
-    async ({ silent = false }: { silent?: boolean } = {}) => {
+    async ({
+      silent = false,
+      showError = true,
+    }: {
+      silent?: boolean;
+      showError?: boolean;
+    } = {}) => {
       if (!silent) {
         setIsLoading(true);
+        setMessage("");
       }
-      setMessage("");
 
       try {
         const response = await fetch("/api/admin/dashboard", {
@@ -252,9 +269,11 @@ export function AdminDashboardProvider({
 
         setData(withDashboardMetrics(payload));
       } catch (error) {
-        setMessage(
-          error instanceof Error ? error.message : "Unable to load admin.",
-        );
+        if (showError) {
+          setMessage(
+            error instanceof Error ? error.message : "Unable to load admin.",
+          );
+        }
       } finally {
         if (!silent) {
           setIsLoading(false);
@@ -275,6 +294,14 @@ export function AdminDashboardProvider({
     }, 0);
 
     return () => window.clearTimeout(loadTimer);
+  }, [loadDashboard]);
+
+  useEffect(() => {
+    const refreshTimer = window.setInterval(() => {
+      void loadDashboard({ silent: true, showError: false });
+    }, 60000);
+
+    return () => window.clearInterval(refreshTimer);
   }, [loadDashboard]);
 
   const filteredOrders = useMemo(() => {
@@ -436,6 +463,16 @@ export function AdminDashboardProvider({
     }
   };
 
+  const refreshDashboard = async () => {
+    setIsRefreshing(true);
+
+    try {
+      await loadDashboard({ silent: true });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const saveProduct = async () => {
     await refreshAfter(async () => {
       const path = editingProductId
@@ -459,13 +496,7 @@ export function AdminDashboardProvider({
   };
 
   if (isLoading) {
-    return (
-      <div className="rounded-card border border-border bg-surface-strong px-6 py-16 text-center shadow-soft">
-        <p className="text-sm font-semibold uppercase text-accent">
-          Loading admin workspace
-        </p>
-      </div>
-    );
+    return <AdminWorkspaceSkeleton />;
   }
 
   if (!data) {
@@ -484,6 +515,9 @@ export function AdminDashboardProvider({
       value={{
         data,
         message,
+        activeSection,
+        setActiveSection,
+        isRefreshing,
         filteredOrders,
         lowStockProducts,
         metrics,
@@ -499,12 +533,143 @@ export function AdminDashboardProvider({
         updatingPaymentIds,
         updateOrderStatus,
         updatePayment,
+        refreshDashboard,
         saveProduct,
         deleteProduct,
       }}
     >
       {children}
     </AdminDashboardContext.Provider>
+  );
+}
+
+export function AdminWorkspace() {
+  return (
+    <AdminDashboardProvider>
+      <AdminWorkspaceShell />
+    </AdminDashboardProvider>
+  );
+}
+
+function AdminWorkspaceShell() {
+  const {
+    activeSection,
+    setActiveSection,
+    isRefreshing,
+    refreshDashboard,
+  } = useAdminDashboard();
+
+  return (
+    <section className="min-h-screen bg-background text-charcoal">
+      <div className="flex min-h-screen">
+        {/* The admin shell stays mounted while sections swap in React state. */}
+        <aside className="hidden w-[220px] shrink-0 border-r border-border bg-surface-strong/80 px-4 py-5 lg:flex lg:flex-col">
+          <button
+            type="button"
+            onClick={() => setActiveSection("dashboard")}
+            className="block rounded-card px-3 py-2 text-left"
+          >
+            <p className="whitespace-nowrap font-serif text-[21px] font-semibold leading-tight text-charcoal">
+              LA ESPERANZA
+            </p>
+            <p className="mt-1 text-xs font-semibold uppercase text-accent">
+              ADMIN
+            </p>
+          </button>
+
+          <AdminSidebarNav
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
+          />
+
+          <div className="mt-auto border-t border-border pt-4">
+            <AdminLogoutButton />
+          </div>
+        </aside>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
+            <div className="flex min-h-16 items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-7">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold uppercase text-accent">
+                  LA ESPERANZA Admin
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  Single-page dashboard workspace
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void refreshDashboard()}
+                  disabled={isRefreshing}
+                  className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-surface-strong px-4 text-sm font-semibold text-charcoal transition hover:border-accent/45 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <RefreshCw
+                    aria-hidden
+                    className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                  />
+                  {isRefreshing ? "Refreshing..." : "Refresh"}
+                </button>
+                <div className="lg:hidden">
+                  <AdminLogoutButton />
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-border px-4 sm:px-6 lg:hidden">
+              <AdminSidebarNav
+                activeSection={activeSection}
+                onSectionChange={setActiveSection}
+                variant="mobile"
+              />
+            </div>
+          </header>
+
+          <main className="flex-1 px-4 py-8 sm:px-6 lg:px-7">
+            <AdminActiveSection />
+          </main>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AdminActiveSection() {
+  const { activeSection } = useAdminDashboard();
+
+  switch (activeSection) {
+    case "orders":
+      return <AdminOrdersManagement />;
+    case "payments":
+      return <AdminPaymentVerification />;
+    case "customers":
+      return <AdminCustomerList />;
+    case "products":
+      return <AdminProductManagement />;
+    case "inventory":
+      return <AdminInventoryPage />;
+    case "dashboard":
+    default:
+      return <AdminDashboardOverview />;
+  }
+}
+
+function AdminWorkspaceSkeleton() {
+  return (
+    <section className="min-h-screen bg-background px-4 py-8 text-charcoal sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="h-16 rounded-card border border-border bg-surface-strong shadow-soft" />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {["one", "two", "three", "four"].map((item) => (
+            <div
+              key={item}
+              className="h-32 animate-pulse rounded-card border border-border bg-surface-strong shadow-soft"
+            />
+          ))}
+        </div>
+        <div className="h-72 animate-pulse rounded-card border border-border bg-surface-strong shadow-soft" />
+      </div>
+    </section>
   );
 }
 

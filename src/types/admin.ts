@@ -1,6 +1,14 @@
 import type { ProductGender } from "@/types/product";
 import type { OrderStatus, PaymentMethod, PaymentStatus } from "@/types/order";
 
+export type AdminSection =
+  | "dashboard"
+  | "orders"
+  | "payments"
+  | "customers"
+  | "products"
+  | "inventory";
+
 export type AdminOrderStatus =
   | "pending"
   | "payment_verification"

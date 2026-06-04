@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   AlertTriangle,
   CreditCard,
@@ -11,22 +9,32 @@ import {
   Users,
 } from "lucide-react";
 import { clsx } from "clsx";
+import type { AdminSection } from "@/types/admin";
 
 const adminNavItems = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
-  { href: "/admin/payments", label: "Payments", icon: CreditCard },
-  { href: "/admin/customers", label: "Customers", icon: Users },
-  { href: "/admin/products", label: "Products", icon: Package },
-  { href: "/admin/inventory", label: "Inventory", icon: AlertTriangle },
-];
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "orders", label: "Orders", icon: ShoppingBag },
+  { id: "payments", label: "Payments", icon: CreditCard },
+  { id: "customers", label: "Customers", icon: Users },
+  { id: "products", label: "Products", icon: Package },
+  { id: "inventory", label: "Inventory", icon: AlertTriangle },
+] satisfies Array<{
+  id: AdminSection;
+  label: string;
+  icon: typeof LayoutDashboard;
+}>;
+
+type AdminSidebarNavProps = {
+  activeSection: AdminSection;
+  onSectionChange: (section: AdminSection) => void;
+  variant?: "desktop" | "mobile";
+};
 
 export function AdminSidebarNav({
+  activeSection,
+  onSectionChange,
   variant = "desktop",
-}: {
-  variant?: "desktop" | "mobile";
-}) {
-  const pathname = usePathname();
+}: AdminSidebarNavProps) {
   const isDesktop = variant === "desktop";
 
   return (
@@ -38,15 +46,16 @@ export function AdminSidebarNav({
     >
       {adminNavItems.map((item) => {
         const Icon = item.icon;
-        const isActive = pathname === item.href;
+        const isActive = activeSection === item.id;
 
         return (
-          <Link
-            key={item.href}
-            href={item.href}
+          <button
+            key={item.id}
+            type="button"
             aria-current={isActive ? "page" : undefined}
+            onClick={() => onSectionChange(item.id)}
             className={clsx(
-              "flex h-11 items-center gap-3 rounded-card text-sm font-semibold transition",
+              "flex h-11 items-center gap-3 rounded-card text-left text-sm font-semibold transition",
               isDesktop ? "px-3" : "shrink-0 border px-4",
               isActive
                 ? "bg-charcoal text-white shadow-soft"
@@ -61,7 +70,7 @@ export function AdminSidebarNav({
               )}
             />
             <span className="whitespace-nowrap">{item.label}</span>
-          </Link>
+          </button>
         );
       })}
     </nav>
