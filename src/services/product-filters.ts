@@ -1,10 +1,15 @@
 import type { Product, ProductFilters } from "@/types/product";
+import { getProductMaxPrice, getProductMinPrice } from "@/lib/products";
 
 export const maxCatalogPrice = (products: Product[]) =>
-  Math.max(...products.map((product) => product.size30mlPrice));
+  products.length
+    ? Math.max(...products.map((product) => getProductMaxPrice(product)))
+    : 0;
 
 export const minCatalogPrice = (products: Product[]) =>
-  Math.min(...products.map((product) => product.size15mlPrice));
+  products.length
+    ? Math.min(...products.map((product) => getProductMinPrice(product)))
+    : 0;
 
 // Pure filtering helper keeps catalog logic reusable outside the Shop page.
 export function filterProducts(products: Product[], filters: ProductFilters) {
@@ -29,9 +34,10 @@ export function filterProducts(products: Product[], filters: ProductFilters) {
 
     const matchesGender =
       filters.gender === "All" || product.gender === filters.gender;
-    const matchesPrice =
-      product.size15mlPrice >= filters.minPrice &&
-      product.size15mlPrice <= filters.maxPrice;
+    const matchesPrice = product.variants.some(
+      (variant) =>
+        variant.price >= filters.minPrice && variant.price <= filters.maxPrice,
+    );
     const matchesOccasion =
       filters.occasion === "All" || product.occasion === filters.occasion;
 

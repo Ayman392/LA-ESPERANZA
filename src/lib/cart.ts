@@ -1,4 +1,4 @@
-import { getProductVariant, products as defaultProducts } from "@/lib/products";
+import { getProductVariant } from "@/lib/products";
 import type { CartItem, CartLineItem, CartProductSize } from "@/types/cart";
 import type { Product, ProductVariant } from "@/types/product";
 
@@ -7,7 +7,7 @@ export const CART_STORAGE_KEY = "la-esperanza-cart";
 const getCartItemKey = (item: Pick<CartItem, "productId" | "size">) =>
   `${item.productId}:${item.size}`;
 
-const findProduct = (productId: string, catalogProducts = defaultProducts) =>
+const findProduct = (productId: string, catalogProducts: Product[] = []) =>
   catalogProducts.find((product) => product.id === productId);
 
 const findVariant = (
@@ -38,10 +38,11 @@ export const addCartItem = (
   productId: string,
   size: CartProductSize,
   quantity = 1,
-  catalogProducts = defaultProducts,
+  catalogProducts: Product[] = [],
+  variantId?: string,
 ) => {
   const product = findProduct(productId, catalogProducts);
-  const variant = product ? getProductVariant(product, size) : undefined;
+  const variant = product ? findVariant(product, size, variantId) : undefined;
 
   if (!product || !variant || variant.stockQuantity <= 0) {
     return items;
@@ -56,8 +57,10 @@ export const addCartItem = (
       {
         productId,
         variantId: variant.id,
-        size,
+        size: variant.sizeLabel,
         sizeMl: variant.sizeMl,
+        unitPrice: variant.price,
+        stockQuantity: variant.stockQuantity,
         quantity: normalizeQuantity(quantity, variant),
       },
     ];
@@ -70,6 +73,8 @@ export const addCartItem = (
           variantId: variant.id,
           size: variant.sizeLabel,
           sizeMl: variant.sizeMl,
+          unitPrice: variant.price,
+          stockQuantity: variant.stockQuantity,
           quantity: normalizeQuantity(item.quantity + quantity, variant),
         }
       : item,
@@ -88,14 +93,19 @@ export const updateCartItemQuantity = (
   productId: string,
   size: CartProductSize,
   quantity: number,
-  catalogProducts = defaultProducts,
+  catalogProducts: Product[] = [],
 ) => {
   if (quantity <= 0) {
     return removeCartItem(items, productId, size);
   }
 
   const product = findProduct(productId, catalogProducts);
-  const variant = product ? getProductVariant(product, size) : undefined;
+  const existingItem = items.find(
+    (item) => getCartItemKey(item) === getCartItemKey({ productId, size }),
+  );
+  const variant = product
+    ? findVariant(product, size, existingItem?.variantId)
+    : undefined;
 
   return items.map((item) =>
     getCartItemKey(item) === getCartItemKey({ productId, size })
@@ -104,6 +114,8 @@ export const updateCartItemQuantity = (
           variantId: variant?.id ?? item.variantId,
           size: variant?.sizeLabel ?? item.size,
           sizeMl: variant?.sizeMl ?? item.sizeMl,
+          unitPrice: variant?.price ?? item.unitPrice,
+          stockQuantity: variant?.stockQuantity ?? item.stockQuantity,
           quantity: normalizeQuantity(quantity, variant),
         }
       : item,
@@ -114,7 +126,7 @@ export const increaseCartItemQuantity = (
   items: CartItem[],
   productId: string,
   size: CartProductSize,
-  catalogProducts = defaultProducts,
+  catalogProducts: Product[] = [],
 ) => {
   const item = items.find(
     (cartItem) => getCartItemKey(cartItem) === getCartItemKey({ productId, size }),
@@ -133,7 +145,7 @@ export const decreaseCartItemQuantity = (
   items: CartItem[],
   productId: string,
   size: CartProductSize,
-  catalogProducts = defaultProducts,
+  catalogProducts: Product[] = [],
 ) => {
   const item = items.find(
     (cartItem) => getCartItemKey(cartItem) === getCartItemKey({ productId, size }),
@@ -150,45 +162,49 @@ export const decreaseCartItemQuantity = (
 
 export const hydrateCartProducts = (
   items: CartItem[],
-  catalogProducts = defaultProducts,
-): CartLineItem[] =>
-  items
-    .map((item) => {
-      const product = findProduct(item.productId, catalogProducts);
+  catalogProducts: Product[] = [],
+): CartLineItem[] => {
+  const lineItems: CartLineItem[] = [];
 
-      if (!product) {
-        return null;
-      }
+  items.forEach((item) => {
+    const product = findProduct(item.productId, catalogProducts);
 
-      const variant = findVariant(product, item.size, item.variantId);
+    if (!product) {
+      return;
+    }
 
-      if (!variant || variant.stockQuantity <= 0) {
-        return null;
-      }
+    const variant = findVariant(product, item.size, item.variantId);
 
-      const quantity = normalizeQuantity(item.quantity, variant);
-      const unitPrice = variant.price;
+    if (!variant || variant.stockQuantity <= 0) {
+      return;
+    }
 
-      return {
-        ...item,
-        variantId: variant.id,
-        size: variant.sizeLabel,
-        sizeMl: variant.sizeMl,
-        quantity,
-        product,
-        variant,
-        unitPrice,
-        lineTotal: unitPrice * quantity,
-      };
-    })
-    .filter((item): item is CartLineItem => Boolean(item));
+    const quantity = normalizeQuantity(item.quantity, variant);
+    const unitPrice = variant.price;
+
+    lineItems.push({
+      ...item,
+      variantId: variant.id,
+      size: variant.sizeLabel,
+      sizeMl: variant.sizeMl,
+      stockQuantity: variant.stockQuantity,
+      quantity,
+      product,
+      variant,
+      unitPrice,
+      lineTotal: unitPrice * quantity,
+    });
+  });
+
+  return lineItems;
+};
 
 export const getCartTotalItems = (items: CartItem[]) =>
   items.reduce((total, item) => total + item.quantity, 0);
 
 export const getCartSubtotal = (
   items: CartItem[],
-  catalogProducts = defaultProducts,
+  catalogProducts: Product[] = [],
 ) =>
   hydrateCartProducts(items, catalogProducts).reduce(
     (total, item) => total + item.lineTotal,

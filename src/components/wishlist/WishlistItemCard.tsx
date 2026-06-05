@@ -6,7 +6,11 @@ import { useState } from "react";
 import { ShoppingBag, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/hooks/useCart";
-import { getProductImageSrc } from "@/lib/products";
+import {
+  getProductImageSrc,
+  getProductMinPrice,
+  sortProductVariants,
+} from "@/lib/products";
 import type { WishlistProduct } from "@/types/wishlist";
 
 type WishlistItemCardProps = {
@@ -16,9 +20,7 @@ type WishlistItemCardProps = {
 
 export function WishlistItemCard({ item, onRemove }: WishlistItemCardProps) {
   const { addItem } = useCart();
-  const sortedVariants = [...item.product.variants].sort(
-    (first, second) => first.sizeMl - second.sizeMl,
-  );
+  const sortedVariants = sortProductVariants(item.product.variants);
   const firstAvailableVariant =
     sortedVariants.find((variant) => variant.stockQuantity > 0) ??
     sortedVariants[0];
@@ -67,7 +69,7 @@ export function WishlistItemCard({ item, onRemove }: WishlistItemCardProps) {
           Inspired by {item.product.inspiredBy}
         </p>
         <p className="mt-4 text-lg font-semibold text-charcoal">
-          From BDT {item.product.size15mlPrice}
+          From BDT {getProductMinPrice(item.product)}
         </p>
         <div className="mt-5 grid grid-cols-2 gap-2">
           {sortedVariants.map((variant) => {
@@ -101,7 +103,13 @@ export function WishlistItemCard({ item, onRemove }: WishlistItemCardProps) {
             disabled={isSelectedOutOfStock}
             onClick={() =>
               selectedVariant
-                ? addItem(item.product.id, selectedVariant.sizeLabel)
+                ? addItem(
+                    item.product.id,
+                    selectedVariant.sizeLabel,
+                    1,
+                    item.product,
+                    selectedVariant.id,
+                  )
                 : undefined
             }
             className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-charcoal px-4 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"

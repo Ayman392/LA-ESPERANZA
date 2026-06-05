@@ -101,9 +101,16 @@ const emptyProduct: AdminProductInput = {
   name: "",
   inspiredBy: "",
   gender: "Unisex",
+  description: "",
+  topNotes: [],
+  middleNotes: [],
+  baseNotes: [],
+  longevity: "",
+  occasion: "",
   size15mlPrice: 0,
+  size15mlStock: 30,
   size30mlPrice: 0,
-  stock: 30,
+  size30mlStock: 30,
   lowStockThreshold: 5,
   image: "/products/flame.png",
   imageUrl: "/products/flame.png",
@@ -266,15 +273,14 @@ const updateVariantInventoryLocally = (
     return {
       ...product,
       variants: productVariants,
-      stock: productVariants.reduce(
-        (total, variant) => total + variant.stockQuantity,
-        0,
-      ),
     };
   });
 
   return withDashboardMetrics({ ...currentData, products, variants });
 };
+
+const getAdminVariantBySize = (product: AdminProduct, sizeMl: 15 | 30) =>
+  product.variants.find((variant) => variant.sizeMl === sizeMl);
 
 function useAdminDashboard() {
   const context = useContext(AdminDashboardContext);
@@ -1053,6 +1059,13 @@ export function AdminProductManagement() {
         <ProductTable
           products={data.products}
           onEdit={(product) => {
+            const size15Variant = getAdminVariantBySize(product, 15);
+            const size30Variant = getAdminVariantBySize(product, 30);
+            const fallbackThreshold =
+              size15Variant?.lowStockThreshold ??
+              size30Variant?.lowStockThreshold ??
+              5;
+
             setEditingProductId(product.id);
             setProductForm({
               id: product.id,
@@ -1060,10 +1073,17 @@ export function AdminProductManagement() {
               name: product.name,
               inspiredBy: product.inspiredBy,
               gender: product.gender,
-              size15mlPrice: product.size15mlPrice,
-              size30mlPrice: product.size30mlPrice,
-              stock: product.stock,
-              lowStockThreshold: product.lowStockThreshold,
+              description: product.description,
+              topNotes: product.topNotes,
+              middleNotes: product.middleNotes,
+              baseNotes: product.baseNotes,
+              longevity: product.longevity,
+              occasion: product.occasion,
+              size15mlPrice: size15Variant?.price ?? 0,
+              size15mlStock: size15Variant?.stockQuantity ?? 0,
+              size30mlPrice: size30Variant?.price ?? 0,
+              size30mlStock: size30Variant?.stockQuantity ?? 0,
+              lowStockThreshold: fallbackThreshold,
               image: product.image,
               imageUrl: product.imageUrl,
               imagePath: product.imagePath,
@@ -1261,6 +1281,12 @@ function ProductEditor({
     key: Key,
     value: AdminProductInput[Key],
   ) => onChange({ ...product, [key]: value });
+  const formatNotes = (notes: string[]) => notes.join(", ");
+  const parseNotes = (value: string) =>
+    value
+      .split(",")
+      .map((note) => note.trim())
+      .filter(Boolean);
   const imagePreview = product.imageUrl || product.image;
 
   const validateImageFile = (file: File) => {
@@ -1389,6 +1415,44 @@ function ProductEditor({
           onChange={(event) => update("inspiredBy", event.target.value)}
           placeholder="Inspired by"
         />
+        <textarea
+          className={`${inputClass} min-h-24 py-3`}
+          value={product.description}
+          onChange={(event) => update("description", event.target.value)}
+          placeholder="Description"
+        />
+        <input
+          className={inputClass}
+          value={product.occasion}
+          onChange={(event) => update("occasion", event.target.value)}
+          placeholder="Occasion"
+        />
+        <input
+          className={inputClass}
+          value={product.longevity}
+          onChange={(event) => update("longevity", event.target.value)}
+          placeholder="Longevity"
+        />
+        <input
+          className={inputClass}
+          value={formatNotes(product.topNotes)}
+          onChange={(event) => update("topNotes", parseNotes(event.target.value))}
+          placeholder="Top notes, comma separated"
+        />
+        <input
+          className={inputClass}
+          value={formatNotes(product.middleNotes)}
+          onChange={(event) =>
+            update("middleNotes", parseNotes(event.target.value))
+          }
+          placeholder="Middle notes, comma separated"
+        />
+        <input
+          className={inputClass}
+          value={formatNotes(product.baseNotes)}
+          onChange={(event) => update("baseNotes", parseNotes(event.target.value))}
+          placeholder="Base notes, comma separated"
+        />
         <select
           className={inputClass}
           value={product.gender}
@@ -1493,31 +1557,44 @@ function ProductEditor({
           }
           placeholder="Image URL"
         />
-        <input
-          className={inputClass}
-          type="number"
-          value={product.size15mlPrice}
-          onChange={(event) =>
-            update("size15mlPrice", Number(event.target.value))
-          }
-          placeholder="15ml price"
-        />
-        <input
-          className={inputClass}
-          type="number"
-          value={product.size30mlPrice}
-          onChange={(event) =>
-            update("size30mlPrice", Number(event.target.value))
-          }
-          placeholder="30ml price"
-        />
-        <input
-          className={inputClass}
-          type="number"
-          value={product.stock}
-          onChange={(event) => update("stock", Number(event.target.value))}
-          placeholder="Default variant stock"
-        />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <input
+            className={inputClass}
+            type="number"
+            value={product.size15mlPrice}
+            onChange={(event) =>
+              update("size15mlPrice", Number(event.target.value))
+            }
+            placeholder="15ml price"
+          />
+          <input
+            className={inputClass}
+            type="number"
+            value={product.size15mlStock}
+            onChange={(event) =>
+              update("size15mlStock", Number(event.target.value))
+            }
+            placeholder="15ml stock"
+          />
+          <input
+            className={inputClass}
+            type="number"
+            value={product.size30mlPrice}
+            onChange={(event) =>
+              update("size30mlPrice", Number(event.target.value))
+            }
+            placeholder="30ml price"
+          />
+          <input
+            className={inputClass}
+            type="number"
+            value={product.size30mlStock}
+            onChange={(event) =>
+              update("size30mlStock", Number(event.target.value))
+            }
+            placeholder="30ml stock"
+          />
+        </div>
         <input
           className={inputClass}
           type="number"
@@ -1611,7 +1688,7 @@ function ProductTable({
       {variantRows.map(({ product, variant }) => (
         <div
           key={variant.id}
-          className="grid gap-4 border-b border-border p-4 last:border-b-0 md:grid-cols-[1.4fr_5rem_8rem_9rem_9rem_auto]"
+          className="grid gap-4 border-b border-border p-4 last:border-b-0 md:grid-cols-[1.4fr_5rem_8rem_8rem_9rem_9rem_auto]"
         >
           <div className="flex items-center gap-3">
             <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-card border border-border bg-[#eee7e4]">
@@ -1632,6 +1709,9 @@ function ProductTable({
           </div>
           <p className="text-sm font-semibold text-charcoal">
             {variant.sizeLabel}
+          </p>
+          <p className="text-sm text-muted">
+            BDT {variant.price}
           </p>
           <p className="text-sm text-muted">
             Stock {variant.stockQuantity}

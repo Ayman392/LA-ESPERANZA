@@ -12,6 +12,8 @@ export type CartItem = {
   variantId?: string;
   size: CartProductSize;
   sizeMl?: ProductSizeMl;
+  unitPrice?: number;
+  stockQuantity?: number;
   quantity: number;
 };
 

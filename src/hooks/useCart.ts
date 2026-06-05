@@ -12,7 +12,6 @@ import {
   removeCartItem,
   updateCartItemQuantity,
 } from "@/lib/cart";
-import { products as defaultProducts } from "@/lib/products";
 import type { CartItem, CartProductSize } from "@/types/cart";
 import type { Product } from "@/types/product";
 
@@ -45,6 +44,9 @@ const normalizeStoredCart = (value: unknown): CartItem[] => {
     const variantId = "variantId" in item ? item.variantId : undefined;
     const size = item.size;
     const sizeMl = "sizeMl" in item ? item.sizeMl : undefined;
+    const unitPrice = "unitPrice" in item ? item.unitPrice : undefined;
+    const stockQuantity =
+      "stockQuantity" in item ? item.stockQuantity : undefined;
     const quantity = item.quantity;
 
     if (
@@ -52,6 +54,8 @@ const normalizeStoredCart = (value: unknown): CartItem[] => {
       (variantId !== undefined && typeof variantId !== "string") ||
       !isCartSize(size) ||
       (sizeMl !== undefined && sizeMl !== 15 && sizeMl !== 30) ||
+      (unitPrice !== undefined && typeof unitPrice !== "number") ||
+      (stockQuantity !== undefined && typeof stockQuantity !== "number") ||
       typeof quantity !== "number"
     ) {
       return;
@@ -62,6 +66,8 @@ const normalizeStoredCart = (value: unknown): CartItem[] => {
       variantId,
       size,
       sizeMl: sizeMl ?? getSizeMl(size),
+      unitPrice,
+      stockQuantity,
       quantity,
     });
   });
@@ -90,8 +96,7 @@ const writeCartStorage = (items: CartItem[]) => {
 
 export function useCart() {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [catalogProducts, setCatalogProducts] =
-    useState<Product[]>(defaultProducts);
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
   const [isReady, setIsReady] = useState(false);
 
   const mergeCatalogProduct = useCallback(
@@ -116,7 +121,7 @@ export function useCart() {
         products?: Product[];
       };
 
-      if (response.ok && payload.products?.length) {
+      if (response.ok && Array.isArray(payload.products)) {
         setCatalogProducts(payload.products);
       }
     } catch {
@@ -155,6 +160,7 @@ export function useCart() {
       size: CartProductSize = "15ml",
       quantity = 1,
       productOverride?: Product,
+      variantId?: string,
     ) => {
       commitItems(
         addCartItem(
@@ -163,6 +169,7 @@ export function useCart() {
           size,
           quantity,
           productOverride ? mergeCatalogProduct(productOverride) : catalogProducts,
+          variantId,
         ),
       );
     },

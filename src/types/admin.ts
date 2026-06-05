@@ -65,10 +65,12 @@ export type AdminProduct = {
   name: string;
   inspiredBy: string;
   gender: ProductGender;
-  size15mlPrice: number;
-  size30mlPrice: number;
-  stock: number;
-  lowStockThreshold: number;
+  description: string;
+  topNotes: string[];
+  middleNotes: string[];
+  baseNotes: string[];
+  longevity: string;
+  occasion: string;
   image: string;
   imageUrl?: string;
   imagePath?: string;
@@ -83,6 +85,7 @@ export type AdminProductVariant = {
   productName: string;
   sizeMl: 15 | 30;
   sizeLabel: "15ml" | "30ml";
+  price: number;
   stockQuantity: number;
   lowStockThreshold: number;
   isActive: boolean;
@@ -91,6 +94,11 @@ export type AdminProductVariant = {
 
 export type AdminProductInput = Omit<AdminProduct, "id" | "variants"> & {
   id?: string;
+  size15mlPrice: number;
+  size15mlStock: number;
+  size30mlPrice: number;
+  size30mlStock: number;
+  lowStockThreshold: number;
 };
 
 export type AdminDashboardSummary = {

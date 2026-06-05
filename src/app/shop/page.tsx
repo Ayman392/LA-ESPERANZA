@@ -3,7 +3,7 @@ import { Container } from "@/components/layout/container";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { ShopCatalog } from "@/components/product/shop-catalog";
-import { productOccasions } from "@/lib/products";
+import { getProductOccasions } from "@/lib/products";
 import { getCatalogProducts } from "@/services/catalog-products";
 
 export const metadata: Metadata = {
@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ShopPage() {
   const catalogProducts = await getCatalogProducts();
+  const productOccasions = getProductOccasions(catalogProducts);
 
   return (
     <main className="min-h-screen">

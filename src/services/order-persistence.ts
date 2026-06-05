@@ -66,16 +66,17 @@ type PaymentRecord = {
 
 type ProductVariantStockRecord = {
   id: string;
+  product_id: string;
   size_ml: 15 | 30;
+  price: number | string;
   stock_quantity: number | null;
 };
 
-type ProductWithVariantStockRecord = {
+type ProductStockRecord = {
   id: string;
   slug: string;
   name: string;
   is_active: boolean | null;
-  product_variants: ProductVariantStockRecord[] | null;
 };
 
 type ValidatedOrderItem = OrderItem & {
@@ -171,8 +172,8 @@ const normalizeOrderItemTotals = (item: OrderItem): OrderItem => {
   };
 };
 
-const getVariantRequestKey = (item: Pick<OrderItem, "slug" | "sizeMl">) =>
-  `${item.slug}:${item.sizeMl}`;
+const getVariantRequestKey = (item: Pick<OrderItem, "productVariantId">) =>
+  item.productVariantId ?? "";
 
 const getRequestedVariantQuantities = (items: OrderItem[]) =>
   items.reduce((quantities, item) => {
@@ -194,51 +195,77 @@ const validateProductVariantStock = async (
   if (
     items.some(
       (item) =>
+        !item.productVariantId ||
         (item.sizeMl !== 15 && item.sizeMl !== 30) ||
         item.size !== `${item.sizeMl}ml`,
     )
   ) {
-    throw new StockValidationError("Every cart item must include a valid size.");
+    throw new StockValidationError(
+      "Every cart item must include a valid product variant and size.",
+    );
   }
 
   const requestedQuantities = getRequestedVariantQuantities(items);
-  const slugs = Array.from(new Set(items.map((item) => item.slug)));
+  const variantIds = Array.from(
+    new Set(items.map((item) => item.productVariantId).filter(Boolean)),
+  ) as string[];
 
-  if (slugs.length === 0) {
+  if (variantIds.length === 0) {
     throw new StockValidationError("Cart items are required.");
   }
 
-  const { data, error } = await supabase
-    .from("products")
-    .select("id, slug, name, is_active, product_variants(id, size_ml, stock_quantity)")
-    .in("slug", slugs)
-    .returns<ProductWithVariantStockRecord[]>();
+  const { data: variants, error } = await supabase
+    .from("product_variants")
+    .select("id, product_id, size_ml, price, stock_quantity")
+    .in("id", variantIds)
+    .returns<ProductVariantStockRecord[]>();
 
   if (error) {
     throw new Error(error.message);
   }
 
-  const stockByVariantKey = new Map<string, ProductVariantStockRecord>();
-  const productBySlug = new Map((data ?? []).map((product) => [product.slug, product]));
+  const productIds = Array.from(
+    new Set((variants ?? []).map((variant) => variant.product_id)),
+  );
+  const products =
+    productIds.length > 0
+      ? await supabase
+          .from("products")
+          .select("id, slug, name, is_active")
+          .in("id", productIds)
+          .returns<ProductStockRecord[]>()
+      : { data: [], error: null };
+
+  if (products.error) {
+    throw new Error(products.error.message);
+  }
+
+  const variantById = new Map((variants ?? []).map((variant) => [variant.id, variant]));
+  const productById = new Map(
+    (products.data ?? []).map((product) => [product.id, product]),
+  );
   const stockProblems = items.flatMap((item) => {
-    const product = productBySlug.get(item.slug);
-
-    if (!product || product.is_active === false) {
-      return [`${item.name} is no longer available.`];
-    }
-
-    const variant = (product.product_variants ?? []).find(
-      (entry) => entry.size_ml === item.sizeMl,
-    );
+    const variant = item.productVariantId
+      ? variantById.get(item.productVariantId)
+      : undefined;
 
     if (!variant) {
       return [`${item.name} ${item.size} is no longer available.`];
     }
 
-    stockByVariantKey.set(getVariantRequestKey(item), variant);
+    const product = productById.get(variant.product_id);
+    if (!product || product.is_active === false) {
+      return [`${item.name} is no longer available.`];
+    }
+
+    const sizeMl = variant.size_ml === 30 ? 30 : 15;
     const requestedQuantity =
       requestedQuantities.get(getVariantRequestKey(item)) ?? 0;
     const availableStock = variant.stock_quantity ?? 0;
+
+    if (sizeMl !== item.sizeMl || item.productId !== variant.product_id) {
+      return [`${item.name} ${item.size} no longer matches the selected variant.`];
+    }
 
     if (requestedQuantity > availableStock) {
       return [
@@ -256,15 +283,27 @@ const validateProductVariantStock = async (
   }
 
   return items.map((item) => {
-    const variant = stockByVariantKey.get(getVariantRequestKey(item));
+    const variant = item.productVariantId
+      ? variantById.get(item.productVariantId)
+      : undefined;
 
     if (!variant) {
       throw new StockValidationError(`${item.name} ${item.size} is no longer available.`);
     }
 
+    const sizeMl = variant.size_ml === 30 ? 30 : 15;
+    const unitPrice = toNumber(variant.price);
+    const itemTotal = unitPrice * item.quantity;
+
     return {
       ...item,
+      productId: variant.product_id,
       productVariantId: variant.id,
+      size: `${sizeMl}ml`,
+      sizeMl,
+      unitPrice,
+      lineTotal: itemTotal,
+      totalPrice: itemTotal,
     };
   });
 };
@@ -276,12 +315,10 @@ const deductProductVariantStock = async (
   const requestedQuantities = getRequestedVariantQuantities(items);
 
   for (const [key, quantity] of requestedQuantities) {
-    const [slug, sizeMl] = key.split(":");
     const { error } = await supabase.rpc(
       "decrement_product_variant_stock",
       {
-        p_product_slug: slug,
-        p_size_ml: Number(sizeMl),
+        p_variant_id: key,
         p_quantity: quantity,
       },
     );
@@ -300,6 +337,12 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
   const orderStatus = getOrderStatusForPaymentMethod(payload.payment.method);
   const paymentStatus = getPaymentStatusForMethod(payload.payment.method);
   const validatedItems = await validateProductVariantStock(supabase, normalizedItems);
+  const subtotal = validatedItems.reduce(
+    (total, item) => total + item.totalPrice,
+    0,
+  );
+  const deliveryCharge = payload.totals.deliveryCharge;
+  const grandTotal = subtotal + deliveryCharge;
   const customer = await createCustomer(supabase, payload.customer);
 
   const { data: order, error: orderError } = await supabase
@@ -314,9 +357,9 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
       district: payload.customer.district,
       notes: payload.customer.notes || null,
       status: orderStatus,
-      subtotal: payload.totals.subtotal,
-      delivery_charge: payload.totals.deliveryCharge,
-      grand_total: payload.totals.grandTotal,
+      subtotal,
+      delivery_charge: deliveryCharge,
+      grand_total: grandTotal,
     })
     .select(
       "id, order_number, customer_id, customer_name, customer_phone, customer_email, delivery_address, district, notes, status, subtotal, delivery_charge, grand_total, created_at",
@@ -353,7 +396,7 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
     order_id: order.id,
     method: payload.payment.method,
     status: paymentStatus,
-    amount: payload.totals.grandTotal,
+    amount: grandTotal,
     sender_number: payload.payment.senderNumber ?? null,
     transaction_id: payload.payment.transactionId ?? null,
   });
@@ -367,7 +410,7 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
   return mapSavedOrder(order, validatedItems, {
     ...payload.payment,
     status: paymentStatus,
-    amount: payload.totals.grandTotal,
+    amount: grandTotal,
   });
 };
 

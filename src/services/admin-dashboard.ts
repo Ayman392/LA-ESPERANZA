@@ -55,11 +55,12 @@ type ProductRow = {
   name: string;
   inspired_by: string;
   gender: "Men" | "Women" | "Unisex";
-  size_15ml_price: number | string;
-  size_30ml_price: number | string;
-  stock: number | null;
-  stock_quantity: number | null;
-  low_stock_threshold: number | null;
+  description: string | null;
+  top_notes: string[] | string | null;
+  middle_notes: string[] | string | null;
+  base_notes: string[] | string | null;
+  longevity: string | null;
+  occasion: string | null;
   image: string;
   image_url: string | null;
   image_path: string | null;
@@ -70,6 +71,7 @@ type ProductVariantRow = {
   id: string;
   product_id: string;
   size_ml: number;
+  price: number | string;
   stock_quantity: number | string;
   low_stock_threshold: number | string | null;
   updated_at: string | null;
@@ -79,6 +81,21 @@ const toNumber = (value: number | string | null | undefined) =>
   typeof value === "number" ? value : Number(value ?? 0);
 
 const toVariantSize = (sizeMl: number): 15 | 30 => (sizeMl === 30 ? 30 : 15);
+
+const toStringArray = (value: string[] | string | null | undefined) => {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
+
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+};
 
 const mapOrder = (order: OrderRow, payments: PaymentRow[]): AdminOrder => {
   const payment = payments.find((entry) => entry.order_id === order.id);
@@ -141,6 +158,7 @@ const mapVariant = (
     productName: product.name,
     sizeMl,
     sizeLabel: `${sizeMl}ml`,
+    price: toNumber(variant.price),
     stockQuantity: toNumber(variant.stock_quantity),
     lowStockThreshold: toNumber(variant.low_stock_threshold ?? 5),
     isActive: product.is_active,
@@ -155,9 +173,6 @@ const mapProduct = (
   const productVariants = variants
     .filter((variant) => variant.productId === product.id)
     .sort((first, second) => first.sizeMl - second.sizeMl);
-  const stock = productVariants.length
-    ? productVariants.reduce((total, variant) => total + variant.stockQuantity, 0)
-    : toNumber(product.stock_quantity ?? product.stock);
 
   return {
     id: product.id,
@@ -165,12 +180,12 @@ const mapProduct = (
     name: product.name,
     inspiredBy: product.inspired_by,
     gender: product.gender,
-    size15mlPrice: toNumber(product.size_15ml_price),
-    size30mlPrice: toNumber(product.size_30ml_price),
-    stock,
-    lowStockThreshold:
-      productVariants[0]?.lowStockThreshold ??
-      toNumber(product.low_stock_threshold ?? 5),
+    description: product.description ?? "",
+    topNotes: toStringArray(product.top_notes),
+    middleNotes: toStringArray(product.middle_notes),
+    baseNotes: toStringArray(product.base_notes),
+    longevity: product.longevity ?? "",
+    occasion: product.occasion ?? "",
     image: product.image_url ?? product.image,
     imageUrl: product.image_url ?? product.image,
     imagePath: product.image_path ?? undefined,
@@ -179,22 +194,35 @@ const mapProduct = (
   };
 };
 
-const productPayload = (product: AdminProductInput) => ({
-  slug: product.slug,
-  name: product.name,
-  inspired_by: product.inspiredBy,
-  gender: product.gender,
-  size_15ml_price: product.size15mlPrice,
-  size_30ml_price: product.size30mlPrice,
-  stock_quantity: Math.max(0, product.stock ?? 0),
-  stock: Math.max(0, product.stock ?? 0),
-  low_stock_threshold: Math.max(0, product.lowStockThreshold ?? 5),
-  image: product.imageUrl || product.image,
-  image_url: product.imageUrl || product.image || null,
-  image_path: product.imagePath || null,
-  is_active: product.isActive,
-  updated_at: new Date().toISOString(),
-});
+const productPayload = (product: AdminProductInput) => {
+  const totalStock =
+    Math.max(0, Math.trunc(product.size15mlStock)) +
+    Math.max(0, Math.trunc(product.size30mlStock));
+
+  return {
+    slug: product.slug,
+    name: product.name,
+    inspired_by: product.inspiredBy,
+    gender: product.gender,
+    description: product.description,
+    top_notes: product.topNotes,
+    middle_notes: product.middleNotes,
+    base_notes: product.baseNotes,
+    longevity: product.longevity,
+    occasion: product.occasion,
+    // Legacy aggregate columns remain mirrored for older migrations, but variants own inventory.
+    size_15ml_price: product.size15mlPrice,
+    size_30ml_price: product.size30mlPrice,
+    stock_quantity: totalStock,
+    stock: totalStock,
+    low_stock_threshold: Math.max(0, product.lowStockThreshold ?? 5),
+    image: product.imageUrl || product.image,
+    image_url: product.imageUrl || product.image || null,
+    image_path: product.imagePath || null,
+    is_active: product.isActive,
+    updated_at: new Date().toISOString(),
+  };
+};
 
 const getActiveVariants = (variants: AdminProductVariant[]) =>
   variants.filter((variant) => variant.isActive);
@@ -214,25 +242,26 @@ const getOutOfStockProductsCount = (variants: AdminProductVariant[]) =>
   getActiveVariants(variants).filter((variant) => variant.stockQuantity === 0)
     .length;
 
-const createDefaultProductVariants = async (
+const upsertProductVariants = async (
   supabase: SupabaseServerClient,
   productId: string,
   product: AdminProductInput,
 ) => {
-  const defaultStock = Math.max(0, Math.trunc(product.stock ?? 30));
   const defaultThreshold = Math.max(0, Math.trunc(product.lowStockThreshold ?? 5));
   const { error } = await supabase.from("product_variants").upsert(
     [
       {
         product_id: productId,
         size_ml: 15,
-        stock_quantity: defaultStock,
+        price: Math.max(0, product.size15mlPrice),
+        stock_quantity: Math.max(0, Math.trunc(product.size15mlStock)),
         low_stock_threshold: defaultThreshold,
       },
       {
         product_id: productId,
         size_ml: 30,
-        stock_quantity: defaultStock,
+        price: Math.max(0, product.size30mlPrice),
+        stock_quantity: Math.max(0, Math.trunc(product.size30mlStock)),
         low_stock_threshold: defaultThreshold,
       },
     ],
@@ -268,12 +297,12 @@ export const getAdminDashboardData = async () => {
       .returns<CustomerRow[]>(),
     supabase
       .from("products")
-      .select("id, slug, name, inspired_by, gender, size_15ml_price, size_30ml_price, stock, stock_quantity, low_stock_threshold, image, image_url, image_path, is_active")
+      .select("id, slug, name, inspired_by, gender, description, top_notes, middle_notes, base_notes, longevity, occasion, image, image_url, image_path, is_active")
       .order("name", { ascending: true })
       .returns<ProductRow[]>(),
     supabase
       .from("product_variants")
-      .select("id, product_id, size_ml, stock_quantity, low_stock_threshold, updated_at")
+      .select("id, product_id, size_ml, price, stock_quantity, low_stock_threshold, updated_at")
       .order("size_ml", { ascending: true })
       .returns<ProductVariantRow[]>(),
   ]);
@@ -409,7 +438,7 @@ export const createAdminProduct = async (product: AdminProductInput) => {
 
   if (error || !data) throw new Error(error?.message ?? "Unable to create product.");
 
-  await createDefaultProductVariants(supabase, data.id, product);
+  await upsertProductVariants(supabase, data.id, product);
 };
 
 export const updateAdminProduct = async (
@@ -432,6 +461,8 @@ export const updateAdminProduct = async (
     .eq("id", productId);
 
   if (error) throw new Error(error.message);
+
+  await upsertProductVariants(supabase, productId, product);
 
   if (
     existingProduct?.image_path &&

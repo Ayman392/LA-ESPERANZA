@@ -2,7 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { ProductActions } from "@/components/product/ProductActions";
 import { Card } from "@/components/ui/card";
-import { getProductImageSrc, getProductTotalStock } from "@/lib/products";
+import {
+  getProductImageSrc,
+  getProductMinPrice,
+  getProductTotalStock,
+  sortProductVariants,
+} from "@/lib/products";
 import type { Product } from "@/types/product";
 
 type ProductCardProps = {
@@ -13,6 +18,7 @@ type ProductCardProps = {
 export function ProductCard({ product }: ProductCardProps) {
   const totalStock = getProductTotalStock(product);
   const imageSrc = getProductImageSrc(product);
+  const variants = sortProductVariants(product.variants);
 
   return (
     <Card className="group flex h-full flex-col overflow-hidden transition duration-300 hover:-translate-y-1 hover:shadow-soft">
@@ -56,7 +62,7 @@ export function ProductCard({ product }: ProductCardProps) {
           <div>
             <p className="text-xs text-muted">From</p>
             <p className="text-lg font-semibold text-charcoal">
-              BDT {product.size15mlPrice}
+              BDT {getProductMinPrice(product)}
             </p>
           </div>
           <p className="text-xs font-medium text-muted">
@@ -64,7 +70,7 @@ export function ProductCard({ product }: ProductCardProps) {
           </p>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          {product.variants.map((variant) => (
+          {variants.map((variant) => (
             <span
               key={variant.id}
               className="rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-muted"

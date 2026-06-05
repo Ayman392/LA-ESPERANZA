@@ -5,6 +5,7 @@ import { Heart, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
+import { sortProductVariants } from "@/lib/products";
 import type { Product } from "@/types/product";
 
 type ProductActionsProps = {
@@ -16,9 +17,7 @@ export function ProductActions({
   product,
   variant = "compact",
 }: ProductActionsProps) {
-  const sortedVariants = [...product.variants].sort(
-    (first, second) => first.sizeMl - second.sizeMl,
-  );
+  const sortedVariants = sortProductVariants(product.variants);
   const firstAvailableVariant =
     sortedVariants.find((entry) => entry.stockQuantity > 0) ?? sortedVariants[0];
   const [selectedVariantId, setSelectedVariantId] = useState(
@@ -74,7 +73,13 @@ export function ProductActions({
             disabled={isSelectedOutOfStock}
             onClick={() =>
               selectedVariant
-                ? addItem(product.id, selectedVariant.sizeLabel, 1, product)
+                ? addItem(
+                    product.id,
+                    selectedVariant.sizeLabel,
+                    1,
+                    product,
+                    selectedVariant.id,
+                  )
                 : undefined
             }
             className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-charcoal px-4 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
@@ -163,7 +168,13 @@ export function ProductActions({
           disabled={isSelectedOutOfStock}
           onClick={() =>
             selectedVariant
-              ? addItem(product.id, selectedVariant.sizeLabel, 1, product)
+              ? addItem(
+                  product.id,
+                  selectedVariant.sizeLabel,
+                  1,
+                  product,
+                  selectedVariant.id,
+                )
               : undefined
           }
           className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-charcoal px-6 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"

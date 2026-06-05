@@ -10,6 +10,7 @@ import {
   removeWishlistItem,
   toggleWishlistItem,
 } from "@/lib/wishlist";
+import type { Product } from "@/types/product";
 import type { WishlistItem } from "@/types/wishlist";
 
 const WISHLIST_SYNC_EVENT = "la-esperanza-wishlist-sync";
@@ -58,24 +59,45 @@ const writeWishlistStorage = (items: WishlistItem[]) => {
 
 export function useWishlist() {
   const [items, setItems] = useState<WishlistItem[]>([]);
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
   const [isReady, setIsReady] = useState(false);
+
+  const refreshCatalogProducts = useCallback(async () => {
+    try {
+      const response = await fetch("/api/products", {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as {
+        products?: Product[];
+      };
+
+      if (response.ok && Array.isArray(payload.products)) {
+        setCatalogProducts(payload.products);
+      }
+    } catch {
+      setCatalogProducts((currentProducts) => currentProducts);
+    }
+  }, []);
 
   useEffect(() => {
     const syncWishlist = () => setItems(readWishlistStorage());
     const hydrationTimer = window.setTimeout(() => {
       syncWishlist();
+      void refreshCatalogProducts();
       setIsReady(true);
     }, 0);
 
     window.addEventListener("storage", syncWishlist);
     window.addEventListener(WISHLIST_SYNC_EVENT, syncWishlist);
+    window.addEventListener("focus", refreshCatalogProducts);
 
     return () => {
       window.clearTimeout(hydrationTimer);
       window.removeEventListener("storage", syncWishlist);
       window.removeEventListener(WISHLIST_SYNC_EVENT, syncWishlist);
+      window.removeEventListener("focus", refreshCatalogProducts);
     };
-  }, []);
+  }, [refreshCatalogProducts]);
 
   const commitItems = useCallback((nextItems: WishlistItem[]) => {
     setItems(nextItems);
@@ -109,8 +131,8 @@ export function useWishlist() {
   );
 
   const wishlistProducts = useMemo(
-    () => hydrateWishlistProducts(items),
-    [items],
+    () => hydrateWishlistProducts(items, catalogProducts),
+    [catalogProducts, items],
   );
   const totalItems = useMemo(() => getWishlistCount(items), [items]);
 

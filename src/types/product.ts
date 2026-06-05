@@ -10,6 +10,8 @@ export type ProductVariant = {
   price: number;
   stockQuantity: number;
   lowStockThreshold: number;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type Product = {
@@ -18,10 +20,7 @@ export type Product = {
   name: string;
   inspiredBy: string;
   gender: ProductGender;
-  size15mlPrice: number;
-  size30mlPrice: number;
   variants: ProductVariant[];
-  stock: number;
   topNotes: string[];
   middleNotes: string[];
   baseNotes: string[];
@@ -31,6 +30,9 @@ export type Product = {
   image: string;
   imageUrl?: string;
   imagePath?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type ProductFilters = {
