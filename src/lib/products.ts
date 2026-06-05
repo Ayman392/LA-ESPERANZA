@@ -159,3 +159,7 @@ export const getProductVariant = (
 
 export const getProductTotalStock = (product: Product) =>
   product.variants.reduce((total, variant) => total + variant.stockQuantity, 0);
+
+export const getProductImageSrc = (
+  product: Pick<Product, "image" | "imageUrl">,
+) => product.imageUrl || product.image;

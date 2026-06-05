@@ -70,6 +70,8 @@ export type AdminProduct = {
   stock: number;
   lowStockThreshold: number;
   image: string;
+  imageUrl?: string;
+  imagePath?: string;
   isActive: boolean;
   variants: AdminProductVariant[];
 };

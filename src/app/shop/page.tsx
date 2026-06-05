@@ -3,14 +3,17 @@ import { Container } from "@/components/layout/container";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { ShopCatalog } from "@/components/product/shop-catalog";
-import { products, productOccasions } from "@/lib/products";
+import { productOccasions } from "@/lib/products";
+import { getCatalogProducts } from "@/services/catalog-products";
 
 export const metadata: Metadata = {
   title: "Shop | LA ESPERANZA",
   description: "Browse the LA ESPERANZA inspired perfume catalog.",
 };
 
-export default function ShopPage() {
+export default async function ShopPage() {
+  const catalogProducts = await getCatalogProducts();
+
   return (
     <main className="min-h-screen">
       <Navbar />
@@ -24,11 +27,11 @@ export default function ShopPage() {
             Explore the LA ESPERANZA perfume catalog.
           </h1>
           <p className="mt-5 text-base leading-8 text-muted">
-            Five inspired perfumes with typed product data, fragrance notes,
+            Six inspired perfumes with typed product data, fragrance notes,
             stock context, price range filtering, and wishlist-ready browsing.
           </p>
         </div>
-        <ShopCatalog products={products} occasions={productOccasions} />
+        <ShopCatalog products={catalogProducts} occasions={productOccasions} />
       </Container>
       <Footer />
     </main>

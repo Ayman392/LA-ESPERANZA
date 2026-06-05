@@ -29,6 +29,8 @@ export type Product = {
   occasion: string;
   description: string;
   image: string;
+  imageUrl?: string;
+  imagePath?: string;
 };
 
 export type ProductFilters = {

@@ -9,16 +9,20 @@ import {
   useRef,
   useState,
 } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
   CheckCircle2,
   CreditCard,
+  ImageIcon,
   Package,
   RefreshCw,
   Search,
   ShoppingBag,
+  Trash2,
+  UploadCloud,
   Users,
 } from "lucide-react";
 import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
@@ -102,6 +106,8 @@ const emptyProduct: AdminProductInput = {
   stock: 30,
   lowStockThreshold: 5,
   image: "/products/flame.png",
+  imageUrl: "/products/flame.png",
+  imagePath: undefined,
   isActive: true,
 };
 
@@ -117,6 +123,8 @@ const metricIcons = [
 
 const inputClass =
   "h-11 rounded-card border border-border bg-background px-3 text-sm text-charcoal outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20";
+const allowedProductImageTypes = ["image/jpeg", "image/png", "image/webp"];
+const maxProductImageSize = 5 * 1024 * 1024;
 
 class AdminApiError extends Error {
   status: number;
@@ -1057,6 +1065,8 @@ export function AdminProductManagement() {
               stock: product.stock,
               lowStockThreshold: product.lowStockThreshold,
               image: product.image,
+              imageUrl: product.imageUrl,
+              imagePath: product.imagePath,
               isActive: product.isActive,
             });
           }}
@@ -1242,10 +1252,118 @@ function ProductEditor({
   onCancel: () => void;
   onSave: () => void;
 }) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState("");
+  const [uploadedImagePath, setUploadedImagePath] = useState("");
   const update = <Key extends keyof AdminProductInput>(
     key: Key,
     value: AdminProductInput[Key],
   ) => onChange({ ...product, [key]: value });
+  const imagePreview = product.imageUrl || product.image;
+
+  const validateImageFile = (file: File) => {
+    if (!allowedProductImageTypes.includes(file.type)) {
+      throw new Error("Upload a JPG, JPEG, PNG, or WEBP image.");
+    }
+
+    if (file.size > maxProductImageSize) {
+      throw new Error("Product images must be 5 MB or smaller.");
+    }
+  };
+
+  const uploadProductImage = async (file: File) => {
+    try {
+      validateImageFile(file);
+      setIsUploadingImage(true);
+      setImageUploadError("");
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/admin/product-images", {
+        method: "POST",
+        credentials: "same-origin",
+        body: formData,
+      });
+      const payload = (await response.json()) as {
+        imageUrl?: string;
+        imagePath?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.imageUrl || !payload.imagePath) {
+        throw new Error(payload.error ?? "Unable to upload image.");
+      }
+
+      onChange({
+        ...product,
+        image: payload.imageUrl,
+        imageUrl: payload.imageUrl,
+        imagePath: payload.imagePath,
+      });
+      setUploadedImagePath(payload.imagePath);
+    } catch (error) {
+      setImageUploadError(
+        error instanceof Error ? error.message : "Unable to upload image.",
+      );
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const deleteProductImage = async () => {
+    try {
+      setIsUploadingImage(true);
+      setImageUploadError("");
+
+      if (product.imagePath && product.imagePath === uploadedImagePath) {
+        const response = await fetch("/api/admin/product-images", {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ imagePath: product.imagePath }),
+        });
+        const payload = (await response.json()) as { error?: string };
+
+        if (!response.ok) {
+          throw new Error(payload.error ?? "Unable to delete image.");
+        }
+      }
+
+      onChange({
+        ...product,
+        image: "/products/flame.png",
+        imageUrl: undefined,
+        imagePath: undefined,
+      });
+      setUploadedImagePath("");
+    } catch (error) {
+      setImageUploadError(
+        error instanceof Error ? error.message : "Unable to delete image.",
+      );
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+  const handleCancel = async () => {
+    if (uploadedImagePath) {
+      await fetch("/api/admin/product-images", {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ imagePath: uploadedImagePath }),
+      });
+      setUploadedImagePath("");
+    }
+
+    onCancel();
+  };
 
   return (
     <div className="rounded-card border border-border bg-surface-strong p-5 shadow-soft">
@@ -1282,11 +1400,98 @@ function ProductEditor({
           <option>Women</option>
           <option>Unisex</option>
         </select>
+        <div
+          onDragOver={(event) => {
+            event.preventDefault();
+            setIsDraggingImage(true);
+          }}
+          onDragLeave={() => setIsDraggingImage(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            setIsDraggingImage(false);
+            const file = event.dataTransfer.files[0];
+
+            if (file) {
+              void uploadProductImage(file);
+            }
+          }}
+          className={`rounded-card border border-dashed p-4 transition ${
+            isDraggingImage
+              ? "border-accent bg-background"
+              : "border-border bg-background/70"
+          }`}
+        >
+          <div className="relative aspect-[4/3] overflow-hidden rounded-card border border-border bg-[#eee7e4]">
+            {imagePreview ? (
+              <Image
+                src={imagePreview}
+                alt={`${product.name || "Product"} image preview`}
+                fill
+                sizes="22rem"
+                className="object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-muted">
+                <ImageIcon aria-hidden className="h-8 w-8" />
+              </div>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+
+              if (file) {
+                void uploadProductImage(file);
+              }
+
+              event.target.value = "";
+            }}
+            className="hidden"
+          />
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              disabled={isUploadingImage}
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-charcoal px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <UploadCloud aria-hidden className="h-4 w-4" />
+              {isUploadingImage ? "Uploading..." : "Upload image"}
+            </button>
+            <button
+              type="button"
+              disabled={isUploadingImage || (!product.imagePath && !product.imageUrl)}
+              onClick={() => void deleteProductImage()}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-border bg-background px-4 text-sm font-semibold text-charcoal disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Trash2 aria-hidden className="h-4 w-4" />
+              Delete image
+            </button>
+          </div>
+          <p className="mt-3 text-xs leading-5 text-muted">
+            Drag and drop or upload JPG, JPEG, PNG, or WEBP up to 5 MB.
+          </p>
+          {imageUploadError ? (
+            <p className="mt-2 text-xs font-semibold text-red-700">
+              {imageUploadError}
+            </p>
+          ) : null}
+        </div>
         <input
           className={inputClass}
-          value={product.image}
-          onChange={(event) => update("image", event.target.value)}
-          placeholder="/products/flame.png"
+          value={product.imageUrl || product.image}
+          onChange={(event) =>
+            onChange({
+              ...product,
+              image: event.target.value,
+              imageUrl: event.target.value,
+              imagePath: undefined,
+            })
+          }
+          placeholder="Image URL"
         />
         <input
           className={inputClass}
@@ -1333,14 +1538,17 @@ function ProductEditor({
         <div className="grid gap-2 sm:grid-cols-2">
           <button
             type="button"
-            onClick={onSave}
+            onClick={() => {
+              onSave();
+              setUploadedImagePath("");
+            }}
             className="h-11 rounded-full bg-charcoal px-4 text-sm font-semibold text-white"
           >
             {isEditing ? "Save" : "Create"}
           </button>
           <button
             type="button"
-            onClick={onCancel}
+            onClick={() => void handleCancel()}
             className="h-11 rounded-full border border-border bg-background px-4 text-sm font-semibold text-charcoal"
           >
             Clear
@@ -1403,13 +1611,24 @@ function ProductTable({
       {variantRows.map(({ product, variant }) => (
         <div
           key={variant.id}
-          className="grid gap-4 border-b border-border p-4 last:border-b-0 md:grid-cols-[1.2fr_5rem_8rem_9rem_9rem_auto]"
+          className="grid gap-4 border-b border-border p-4 last:border-b-0 md:grid-cols-[1.4fr_5rem_8rem_9rem_9rem_auto]"
         >
-          <div>
-            <p className="font-semibold text-charcoal">{product.name}</p>
-            <p className="mt-1 text-sm text-muted">
-              {product.gender} | {product.inspiredBy}
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-card border border-border bg-[#eee7e4]">
+              <Image
+                src={product.imageUrl || product.image}
+                alt={`${product.name} preview`}
+                fill
+                sizes="3.5rem"
+                className="object-cover"
+              />
+            </div>
+            <div>
+              <p className="font-semibold text-charcoal">{product.name}</p>
+              <p className="mt-1 text-sm text-muted">
+                {product.gender} | {product.inspiredBy}
+              </p>
+            </div>
           </div>
           <p className="text-sm font-semibold text-charcoal">
             {variant.sizeLabel}

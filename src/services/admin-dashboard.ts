@@ -61,6 +61,8 @@ type ProductRow = {
   stock_quantity: number | null;
   low_stock_threshold: number | null;
   image: string;
+  image_url: string | null;
+  image_path: string | null;
   is_active: boolean;
 };
 
@@ -169,7 +171,9 @@ const mapProduct = (
     lowStockThreshold:
       productVariants[0]?.lowStockThreshold ??
       toNumber(product.low_stock_threshold ?? 5),
-    image: product.image,
+    image: product.image_url ?? product.image,
+    imageUrl: product.image_url ?? product.image,
+    imagePath: product.image_path ?? undefined,
     isActive: product.is_active,
     variants: productVariants,
   };
@@ -185,7 +189,9 @@ const productPayload = (product: AdminProductInput) => ({
   stock_quantity: Math.max(0, product.stock ?? 0),
   stock: Math.max(0, product.stock ?? 0),
   low_stock_threshold: Math.max(0, product.lowStockThreshold ?? 5),
-  image: product.image,
+  image: product.imageUrl || product.image,
+  image_url: product.imageUrl || product.image || null,
+  image_path: product.imagePath || null,
   is_active: product.isActive,
   updated_at: new Date().toISOString(),
 });
@@ -262,7 +268,7 @@ export const getAdminDashboardData = async () => {
       .returns<CustomerRow[]>(),
     supabase
       .from("products")
-      .select("id, slug, name, inspired_by, gender, size_15ml_price, size_30ml_price, stock, stock_quantity, low_stock_threshold, image, is_active")
+      .select("id, slug, name, inspired_by, gender, size_15ml_price, size_30ml_price, stock, stock_quantity, low_stock_threshold, image, image_url, image_path, is_active")
       .order("name", { ascending: true })
       .returns<ProductRow[]>(),
     supabase
@@ -410,12 +416,29 @@ export const updateAdminProduct = async (
   product: AdminProductInput,
 ) => {
   const supabase = createSupabaseServerClient();
+  const { data: existingProduct, error: existingProductError } = await supabase
+    .from("products")
+    .select("image_path")
+    .eq("id", productId)
+    .single<{ image_path: string | null }>();
+
+  if (existingProductError) throw new Error(existingProductError.message);
+
   const { error } = await supabase
     .from("products")
     .update(productPayload(product))
     .eq("id", productId);
 
   if (error) throw new Error(error.message);
+
+  if (
+    existingProduct?.image_path &&
+    existingProduct.image_path !== product.imagePath
+  ) {
+    await supabase.storage
+      .from("product-images")
+      .remove([existingProduct.image_path]);
+  }
 };
 
 export const updateAdminProductVariant = async (
@@ -438,6 +461,18 @@ export const updateAdminProductVariant = async (
 
 export const deleteAdminProduct = async (productId: string) => {
   const supabase = createSupabaseServerClient();
+  const { data: product, error: productError } = await supabase
+    .from("products")
+    .select("image_path")
+    .eq("id", productId)
+    .single<{ image_path: string | null }>();
+
+  if (productError) throw new Error(productError.message);
+
+  if (product?.image_path) {
+    await supabase.storage.from("product-images").remove([product.image_path]);
+  }
+
   const { error } = await supabase.from("products").delete().eq("id", productId);
 
   if (error) throw new Error(error.message);

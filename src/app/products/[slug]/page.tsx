@@ -7,7 +7,13 @@ import { Navbar } from "@/components/layout/navbar";
 import { ProductActions } from "@/components/product/ProductActions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getProductBySlug, getProductTotalStock, products } from "@/lib/products";
+import {
+  getProductBySlug,
+  getProductImageSrc,
+  getProductTotalStock,
+  products,
+} from "@/lib/products";
+import { getCatalogProductBySlug } from "@/services/catalog-products";
 
 type ProductDetailPageProps = {
   params: Promise<{
@@ -43,7 +49,7 @@ export default async function ProductDetailPage({
   params,
 }: ProductDetailPageProps) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getCatalogProductBySlug(slug);
 
   if (!product) {
     notFound();
@@ -55,6 +61,7 @@ export default async function ProductDetailPage({
     { label: "Base notes", notes: product.baseNotes },
   ];
   const totalStock = getProductTotalStock(product);
+  const imageSrc = getProductImageSrc(product);
 
   return (
     <main className="min-h-screen">
@@ -69,7 +76,7 @@ export default async function ProductDetailPage({
           <div className="relative aspect-[4/5] overflow-hidden rounded-card border border-border bg-surface-strong p-3 shadow-soft">
             <div className="relative h-full overflow-hidden rounded-card bg-[#171715]">
               <Image
-                src={product.image}
+                src={imageSrc}
                 alt={`${product.name} perfume bottle`}
                 fill
                 priority

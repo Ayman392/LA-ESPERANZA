@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { DELIVERY_CHARGE } from "@/lib/orders";
+import { getProductImageSrc } from "@/lib/products";
 import type { CartLineItem } from "@/types/cart";
 
 type CheckoutOrderSummaryProps = {
@@ -29,7 +30,7 @@ export function CheckoutOrderSummary({
               className="relative aspect-[4/5] overflow-hidden rounded-card bg-[#eee7e4]"
             >
               <Image
-                src={item.product.image}
+                src={getProductImageSrc(item.product)}
                 alt={`${item.product.name} perfume bottle`}
                 fill
                 sizes="4.5rem"

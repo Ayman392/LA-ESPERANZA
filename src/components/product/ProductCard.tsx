@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ProductActions } from "@/components/product/ProductActions";
 import { Card } from "@/components/ui/card";
-import { getProductTotalStock } from "@/lib/products";
+import { getProductImageSrc, getProductTotalStock } from "@/lib/products";
 import type { Product } from "@/types/product";
 
 type ProductCardProps = {
@@ -12,13 +12,14 @@ type ProductCardProps = {
 // Catalog cards surface quick cart and wishlist actions while keeping details linked.
 export function ProductCard({ product }: ProductCardProps) {
   const totalStock = getProductTotalStock(product);
+  const imageSrc = getProductImageSrc(product);
 
   return (
     <Card className="group flex h-full flex-col overflow-hidden transition duration-300 hover:-translate-y-1 hover:shadow-soft">
       <Link href={`/products/${product.slug}`} className="block">
         <div className="relative aspect-[4/5] overflow-hidden bg-[#eee7e4]">
           <Image
-            src={product.image}
+            src={imageSrc}
             alt={`${product.name} perfume bottle`}
             fill
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"

@@ -1,4 +1,5 @@
 import type { CartLineItem } from "@/types/cart";
+import { getProductImageSrc } from "@/lib/products";
 import type {
   CheckoutFormErrors,
   CheckoutFormValues,
@@ -125,7 +126,7 @@ export const createOrderItems = (lineItems: CartLineItem[]): OrderItem[] =>
       unitPrice: item.unitPrice,
       lineTotal: itemTotal,
       totalPrice: itemTotal,
-      image: item.product.image,
+      image: getProductImageSrc(item.product),
     };
   });
 

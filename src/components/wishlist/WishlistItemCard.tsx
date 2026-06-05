@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ShoppingBag, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/hooks/useCart";
-import { getProductVariant } from "@/lib/products";
+import { getProductImageSrc, getProductVariant } from "@/lib/products";
 import type { WishlistProduct } from "@/types/wishlist";
 
 type WishlistItemCardProps = {
@@ -18,6 +18,7 @@ export function WishlistItemCard({ item, onRemove }: WishlistItemCardProps) {
   const defaultVariant = getProductVariant(item.product, "15ml");
   const isDefaultOutOfStock =
     !defaultVariant || defaultVariant.stockQuantity <= 0;
+  const imageSrc = getProductImageSrc(item.product);
 
   return (
     <motion.article
@@ -33,7 +34,7 @@ export function WishlistItemCard({ item, onRemove }: WishlistItemCardProps) {
         className="relative block aspect-[4/5] bg-[#eee7e4]"
       >
         <Image
-          src={item.product.image}
+          src={imageSrc}
           alt={`${item.product.name} perfume bottle`}
           fill
           sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"

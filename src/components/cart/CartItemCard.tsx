@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { getProductImageSrc } from "@/lib/products";
 import type { CartLineItem } from "@/types/cart";
 
 type CartItemCardProps = {
@@ -21,6 +22,8 @@ export function CartItemCard({
   onRemove,
   onUpdateQuantity,
 }: CartItemCardProps) {
+  const imageSrc = getProductImageSrc(item.product);
+
   return (
     <motion.article
       layout
@@ -35,7 +38,7 @@ export function CartItemCard({
         className="relative aspect-[4/5] overflow-hidden rounded-card bg-[#eee7e4]"
       >
         <Image
-          src={item.product.image}
+          src={imageSrc}
           alt={`${item.product.name} perfume bottle`}
           fill
           sizes="8rem"
