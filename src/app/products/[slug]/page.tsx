@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import {
   getProductImageSrc,
   getProductTotalStock,
+  getProductVariants,
+  sortProductVariants,
 } from "@/lib/products";
 import { getCatalogProductBySlug } from "@/services/catalog-products";
 
@@ -56,6 +58,9 @@ export default async function ProductDetailPage({
   ];
   const totalStock = getProductTotalStock(product);
   const imageSrc = getProductImageSrc(product);
+  const variants = sortProductVariants(
+    product.product_variants ?? getProductVariants(product),
+  );
 
   return (
     <main className="min-h-screen">
@@ -127,22 +132,28 @@ export default async function ProductDetailPage({
                 Sizes and prices
               </p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {product.variants.map((variant) => (
-                  <div
-                    key={variant.id}
-                    className="rounded-card border border-border bg-background p-4"
-                  >
-                    <p className="text-sm text-muted">{variant.sizeLabel}</p>
-                    <p className="mt-1 text-2xl font-semibold text-charcoal">
-                      BDT {variant.price}
-                    </p>
-                    <p className="mt-2 text-xs font-semibold uppercase text-accent">
-                      {variant.stockQuantity > 0
-                        ? `${variant.stockQuantity} in stock`
-                        : "Out of stock"}
-                    </p>
+                {variants.length > 0 ? (
+                  variants.map((variant) => (
+                    <div
+                      key={variant.id}
+                      className="rounded-card border border-border bg-background p-4"
+                    >
+                      <p className="text-sm text-muted">{variant.sizeLabel}</p>
+                      <p className="mt-1 text-2xl font-semibold text-charcoal">
+                        BDT {variant.price}
+                      </p>
+                      <p className="mt-2 text-xs font-semibold uppercase text-accent">
+                        {variant.stockQuantity > 0
+                          ? `${variant.stockQuantity} in stock`
+                          : "Out of stock"}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-card border border-dashed border-border bg-background p-4 text-sm text-muted">
+                    No sizes are available for this product yet.
                   </div>
-                ))}
+                )}
               </div>
             </Card>
 

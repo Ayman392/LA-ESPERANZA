@@ -1,4 +1,4 @@
-import { getProductVariant } from "@/lib/products";
+import { getProductVariant, getProductVariants } from "@/lib/products";
 import type { CartItem, CartLineItem, CartProductSize } from "@/types/cart";
 import type { Product, ProductVariant } from "@/types/product";
 
@@ -15,7 +15,7 @@ const findVariant = (
   size: CartProductSize,
   variantId?: string,
 ) =>
-  product.variants.find((variant) => variant.id === variantId) ??
+  getProductVariants(product).find((variant) => variant.id === variantId) ??
   getProductVariant(product, size);
 
 const normalizeQuantity = (quantity: number, variant?: ProductVariant) => {

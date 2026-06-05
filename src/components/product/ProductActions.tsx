@@ -5,7 +5,7 @@ import { Heart, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
-import { sortProductVariants } from "@/lib/products";
+import { getProductVariants, sortProductVariants } from "@/lib/products";
 import type { Product } from "@/types/product";
 
 type ProductActionsProps = {
@@ -17,7 +17,8 @@ export function ProductActions({
   product,
   variant = "compact",
 }: ProductActionsProps) {
-  const sortedVariants = sortProductVariants(product.variants);
+  const variants = product.product_variants ?? getProductVariants(product);
+  const sortedVariants = sortProductVariants(variants);
   const firstAvailableVariant =
     sortedVariants.find((entry) => entry.stockQuantity > 0) ?? sortedVariants[0];
   const [selectedVariantId, setSelectedVariantId] = useState(

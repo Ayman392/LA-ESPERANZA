@@ -9,6 +9,7 @@ import { useCart } from "@/hooks/useCart";
 import {
   getProductImageSrc,
   getProductMinPrice,
+  getProductVariants,
   sortProductVariants,
 } from "@/lib/products";
 import type { WishlistProduct } from "@/types/wishlist";
@@ -20,7 +21,8 @@ type WishlistItemCardProps = {
 
 export function WishlistItemCard({ item, onRemove }: WishlistItemCardProps) {
   const { addItem } = useCart();
-  const sortedVariants = sortProductVariants(item.product.variants);
+  const variants = item.product.product_variants ?? getProductVariants(item.product);
+  const sortedVariants = sortProductVariants(variants);
   const firstAvailableVariant =
     sortedVariants.find((variant) => variant.stockQuantity > 0) ??
     sortedVariants[0];

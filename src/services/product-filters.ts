@@ -1,5 +1,9 @@
 import type { Product, ProductFilters } from "@/types/product";
-import { getProductMaxPrice, getProductMinPrice } from "@/lib/products";
+import {
+  getProductMaxPrice,
+  getProductMinPrice,
+  getProductVariants,
+} from "@/lib/products";
 
 export const maxCatalogPrice = (products: Product[]) =>
   products.length
@@ -34,7 +38,8 @@ export function filterProducts(products: Product[], filters: ProductFilters) {
 
     const matchesGender =
       filters.gender === "All" || product.gender === filters.gender;
-    const matchesPrice = product.variants.some(
+    const variants = product.product_variants ?? getProductVariants(product);
+    const matchesPrice = variants.some(
       (variant) =>
         variant.price >= filters.minPrice && variant.price <= filters.maxPrice,
     );

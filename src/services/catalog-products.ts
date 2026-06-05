@@ -8,7 +8,7 @@ type CatalogVariantRow = {
   id: string;
   product_id: string;
   size_ml: number;
-  price: number | string;
+  price?: number | string | null;
   stock_quantity: number | string | null;
   low_stock_threshold: number | string | null;
   created_at: string | null;
@@ -35,6 +35,9 @@ type CatalogProductRow = {
   updated_at: string | null;
   product_variants: CatalogVariantRow[] | null;
 };
+
+const catalogSelect =
+  "id, slug, name, inspired_by, gender, description, image, image_url, image_path, top_notes, middle_notes, base_notes, longevity, occasion, is_active, created_at, updated_at, product_variants(id, product_id, size_ml, price, stock_quantity, low_stock_threshold, created_at, updated_at)";
 
 const canReadSupabaseCatalog = () =>
   Boolean(
@@ -89,6 +92,7 @@ const mapProduct = (product: CatalogProductRow): Product => {
     inspiredBy: product.inspired_by,
     gender: product.gender,
     variants,
+    product_variants: variants,
     topNotes: toStringArray(product.top_notes),
     middleNotes: toStringArray(product.middle_notes),
     baseNotes: toStringArray(product.base_notes),
@@ -114,15 +118,15 @@ export const getCatalogProducts = async (): Promise<Product[]> => {
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from("products")
-    .select(
-      "id, slug, name, inspired_by, gender, description, image, image_url, image_path, top_notes, middle_notes, base_notes, longevity, occasion, is_active, created_at, updated_at, product_variants(id, product_id, size_ml, price, stock_quantity, low_stock_threshold, created_at, updated_at)",
-    )
+    .select(catalogSelect)
     .eq("is_active", true)
     .order("name", { ascending: true })
     .returns<CatalogProductRow[]>();
 
   if (error) {
-    throw new Error(error.message);
+    console.error("Unable to load Supabase catalog products:", error.message);
+
+    return [];
   }
 
   return (data ?? []).map(mapProduct);
@@ -136,15 +140,15 @@ export const getCatalogProductBySlug = async (slug: string) => {
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from("products")
-    .select(
-      "id, slug, name, inspired_by, gender, description, image, image_url, image_path, top_notes, middle_notes, base_notes, longevity, occasion, is_active, created_at, updated_at, product_variants(id, product_id, size_ml, price, stock_quantity, low_stock_threshold, created_at, updated_at)",
-    )
+    .select(catalogSelect)
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle<CatalogProductRow>();
 
   if (error) {
-    throw new Error(error.message);
+    console.error("Unable to load Supabase catalog product:", error.message);
+
+    return null;
   }
 
   return data ? mapProduct(data) : null;

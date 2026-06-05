@@ -20,7 +20,8 @@ export type Product = {
   name: string;
   inspiredBy: string;
   gender: ProductGender;
-  variants: ProductVariant[];
+  variants?: ProductVariant[] | null;
+  product_variants?: ProductVariant[] | null;
   topNotes: string[];
   middleNotes: string[];
   baseNotes: string[];
