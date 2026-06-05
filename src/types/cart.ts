@@ -1,10 +1,17 @@
-import type { Product, ProductSizeLabel, ProductVariant } from "@/types/product";
+import type {
+  Product,
+  ProductSizeLabel,
+  ProductSizeMl,
+  ProductVariant,
+} from "@/types/product";
 
 export type CartProductSize = ProductSizeLabel;
 
 export type CartItem = {
   productId: string;
+  variantId?: string;
   size: CartProductSize;
+  sizeMl?: ProductSizeMl;
   quantity: number;
 };
 
@@ -12,6 +19,7 @@ export type CartLineItem = CartItem & {
   product: Product;
   variant: ProductVariant;
   variantId: string;
+  sizeMl: ProductSizeMl;
   unitPrice: number;
   lineTotal: number;
 };

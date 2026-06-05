@@ -21,42 +21,52 @@ const CART_SYNC_EVENT = "la-esperanza-cart-sync";
 const isCartSize = (size: unknown): size is CartProductSize =>
   size === "15ml" || size === "30ml";
 
+const getSizeMl = (size: CartProductSize) => (size === "30ml" ? 30 : 15);
+
 const normalizeStoredCart = (value: unknown): CartItem[] => {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value
-    .map((item) => {
-      if (
-        typeof item !== "object" ||
-        item === null ||
-        !("productId" in item) ||
-        !("size" in item) ||
-        !("quantity" in item)
-      ) {
-        return null;
-      }
+  const normalizedItems: CartItem[] = [];
 
-      const productId = item.productId;
-      const size = item.size;
-      const quantity = item.quantity;
+  value.forEach((item) => {
+    if (
+      typeof item !== "object" ||
+      item === null ||
+      !("productId" in item) ||
+      !("size" in item) ||
+      !("quantity" in item)
+    ) {
+      return;
+    }
 
-      if (
-        typeof productId !== "string" ||
-        !isCartSize(size) ||
-        typeof quantity !== "number"
-      ) {
-        return null;
-      }
+    const productId = item.productId;
+    const variantId = "variantId" in item ? item.variantId : undefined;
+    const size = item.size;
+    const sizeMl = "sizeMl" in item ? item.sizeMl : undefined;
+    const quantity = item.quantity;
 
-      return {
-        productId,
-        size,
-        quantity,
-      };
-    })
-    .filter((item): item is CartItem => Boolean(item));
+    if (
+      typeof productId !== "string" ||
+      (variantId !== undefined && typeof variantId !== "string") ||
+      !isCartSize(size) ||
+      (sizeMl !== undefined && sizeMl !== 15 && sizeMl !== 30) ||
+      typeof quantity !== "number"
+    ) {
+      return;
+    }
+
+    normalizedItems.push({
+      productId,
+      variantId,
+      size,
+      sizeMl: sizeMl ?? getSizeMl(size),
+      quantity,
+    });
+  });
+
+  return normalizedItems;
 };
 
 const readCartStorage = () => {

@@ -1,6 +1,6 @@
 import { getProductVariant, products as defaultProducts } from "@/lib/products";
 import type { CartItem, CartLineItem, CartProductSize } from "@/types/cart";
-import type { Product } from "@/types/product";
+import type { Product, ProductVariant } from "@/types/product";
 
 export const CART_STORAGE_KEY = "la-esperanza-cart";
 
@@ -10,14 +10,17 @@ const getCartItemKey = (item: Pick<CartItem, "productId" | "size">) =>
 const findProduct = (productId: string, catalogProducts = defaultProducts) =>
   catalogProducts.find((product) => product.id === productId);
 
-const normalizeQuantity = (
-  quantity: number,
-  product?: Product,
-  size?: CartProductSize,
-) => {
+const findVariant = (
+  product: Product,
+  size: CartProductSize,
+  variantId?: string,
+) =>
+  product.variants.find((variant) => variant.id === variantId) ??
+  getProductVariant(product, size);
+
+const normalizeQuantity = (quantity: number, variant?: ProductVariant) => {
   const safeQuantity = Number.isFinite(quantity) ? Math.trunc(quantity) : 1;
   const minimumQuantity = Math.max(1, safeQuantity);
-  const variant = product && size ? getProductVariant(product, size) : undefined;
 
   return variant
     ? Math.min(minimumQuantity, variant.stockQuantity)
@@ -52,8 +55,10 @@ export const addCartItem = (
       ...items,
       {
         productId,
+        variantId: variant.id,
         size,
-        quantity: normalizeQuantity(quantity, product, size),
+        sizeMl: variant.sizeMl,
+        quantity: normalizeQuantity(quantity, variant),
       },
     ];
   }
@@ -62,7 +67,10 @@ export const addCartItem = (
     getCartItemKey(item) === itemKey
       ? {
           ...item,
-          quantity: normalizeQuantity(item.quantity + quantity, product, size),
+          variantId: variant.id,
+          size: variant.sizeLabel,
+          sizeMl: variant.sizeMl,
+          quantity: normalizeQuantity(item.quantity + quantity, variant),
         }
       : item,
   );
@@ -87,10 +95,17 @@ export const updateCartItemQuantity = (
   }
 
   const product = findProduct(productId, catalogProducts);
+  const variant = product ? getProductVariant(product, size) : undefined;
 
   return items.map((item) =>
     getCartItemKey(item) === getCartItemKey({ productId, size })
-      ? { ...item, quantity: normalizeQuantity(quantity, product, size) }
+      ? {
+          ...item,
+          variantId: variant?.id ?? item.variantId,
+          size: variant?.sizeLabel ?? item.size,
+          sizeMl: variant?.sizeMl ?? item.sizeMl,
+          quantity: normalizeQuantity(quantity, variant),
+        }
       : item,
   );
 };
@@ -145,21 +160,23 @@ export const hydrateCartProducts = (
         return null;
       }
 
-      const variant = getProductVariant(product, item.size);
+      const variant = findVariant(product, item.size, item.variantId);
 
       if (!variant || variant.stockQuantity <= 0) {
         return null;
       }
 
-      const quantity = normalizeQuantity(item.quantity, product, item.size);
+      const quantity = normalizeQuantity(item.quantity, variant);
       const unitPrice = variant.price;
 
       return {
         ...item,
+        variantId: variant.id,
+        size: variant.sizeLabel,
+        sizeMl: variant.sizeMl,
         quantity,
         product,
         variant,
-        variantId: variant.id,
         unitPrice,
         lineTotal: unitPrice * quantity,
       };
