@@ -45,7 +45,7 @@ export function ProductActions({
         <button
           type="button"
           disabled={isDefaultOutOfStock}
-          onClick={() => addItem(product.id, "15ml")}
+          onClick={() => addItem(product.id, "15ml", 1, product)}
           className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-charcoal px-4 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ShoppingBag aria-hidden className="h-4 w-4" />
@@ -121,7 +121,7 @@ export function ProductActions({
         <button
           type="button"
           disabled={isSelectedOutOfStock}
-          onClick={() => addItem(product.id, selectedSize)}
+          onClick={() => addItem(product.id, selectedSize, 1, product)}
           className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-charcoal px-6 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ShoppingBag aria-hidden className="h-4 w-4" />

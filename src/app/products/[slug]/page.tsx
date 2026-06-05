@@ -21,6 +21,8 @@ type ProductDetailPageProps = {
   }>;
 };
 
+export const dynamic = "force-dynamic";
+
 export function generateStaticParams() {
   return products.map((product) => ({
     slug: product.slug,

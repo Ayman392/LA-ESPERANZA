@@ -1,4 +1,4 @@
-import { getProductVariant, products } from "@/lib/products";
+import { getProductVariant, products as defaultProducts } from "@/lib/products";
 import type { CartItem, CartLineItem, CartProductSize } from "@/types/cart";
 import type { Product } from "@/types/product";
 
@@ -7,8 +7,8 @@ export const CART_STORAGE_KEY = "la-esperanza-cart";
 const getCartItemKey = (item: Pick<CartItem, "productId" | "size">) =>
   `${item.productId}:${item.size}`;
 
-const findProduct = (productId: string) =>
-  products.find((product) => product.id === productId);
+const findProduct = (productId: string, catalogProducts = defaultProducts) =>
+  catalogProducts.find((product) => product.id === productId);
 
 const normalizeQuantity = (
   quantity: number,
@@ -35,8 +35,9 @@ export const addCartItem = (
   productId: string,
   size: CartProductSize,
   quantity = 1,
+  catalogProducts = defaultProducts,
 ) => {
-  const product = findProduct(productId);
+  const product = findProduct(productId, catalogProducts);
   const variant = product ? getProductVariant(product, size) : undefined;
 
   if (!product || !variant || variant.stockQuantity <= 0) {
@@ -79,12 +80,13 @@ export const updateCartItemQuantity = (
   productId: string,
   size: CartProductSize,
   quantity: number,
+  catalogProducts = defaultProducts,
 ) => {
   if (quantity <= 0) {
     return removeCartItem(items, productId, size);
   }
 
-  const product = findProduct(productId);
+  const product = findProduct(productId, catalogProducts);
 
   return items.map((item) =>
     getCartItemKey(item) === getCartItemKey({ productId, size })
@@ -97,6 +99,7 @@ export const increaseCartItemQuantity = (
   items: CartItem[],
   productId: string,
   size: CartProductSize,
+  catalogProducts = defaultProducts,
 ) => {
   const item = items.find(
     (cartItem) => getCartItemKey(cartItem) === getCartItemKey({ productId, size }),
@@ -107,6 +110,7 @@ export const increaseCartItemQuantity = (
     productId,
     size,
     (item?.quantity ?? 0) + 1,
+    catalogProducts,
   );
 };
 
@@ -114,6 +118,7 @@ export const decreaseCartItemQuantity = (
   items: CartItem[],
   productId: string,
   size: CartProductSize,
+  catalogProducts = defaultProducts,
 ) => {
   const item = items.find(
     (cartItem) => getCartItemKey(cartItem) === getCartItemKey({ productId, size }),
@@ -124,13 +129,17 @@ export const decreaseCartItemQuantity = (
     productId,
     size,
     (item?.quantity ?? 1) - 1,
+    catalogProducts,
   );
 };
 
-export const hydrateCartProducts = (items: CartItem[]): CartLineItem[] =>
+export const hydrateCartProducts = (
+  items: CartItem[],
+  catalogProducts = defaultProducts,
+): CartLineItem[] =>
   items
     .map((item) => {
-      const product = findProduct(item.productId);
+      const product = findProduct(item.productId, catalogProducts);
 
       if (!product) {
         return null;
@@ -138,7 +147,7 @@ export const hydrateCartProducts = (items: CartItem[]): CartLineItem[] =>
 
       const variant = getProductVariant(product, item.size);
 
-      if (!variant) {
+      if (!variant || variant.stockQuantity <= 0) {
         return null;
       }
 
@@ -160,7 +169,13 @@ export const hydrateCartProducts = (items: CartItem[]): CartLineItem[] =>
 export const getCartTotalItems = (items: CartItem[]) =>
   items.reduce((total, item) => total + item.quantity, 0);
 
-export const getCartSubtotal = (items: CartItem[]) =>
-  hydrateCartProducts(items).reduce((total, item) => total + item.lineTotal, 0);
+export const getCartSubtotal = (
+  items: CartItem[],
+  catalogProducts = defaultProducts,
+) =>
+  hydrateCartProducts(items, catalogProducts).reduce(
+    (total, item) => total + item.lineTotal,
+    0,
+  );
 
 export const clearCartItems = (): CartItem[] => [];

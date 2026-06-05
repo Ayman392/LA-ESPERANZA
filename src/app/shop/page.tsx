@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   description: "Browse the LA ESPERANZA inspired perfume catalog.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function ShopPage() {
   const catalogProducts = await getCatalogProducts();
 
