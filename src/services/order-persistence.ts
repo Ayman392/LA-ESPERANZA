@@ -379,9 +379,13 @@ export const getSupabaseOrderByNumber = async (orderNumber: string) => {
       "id, order_number, customer_id, customer_name, customer_phone, customer_email, delivery_address, district, notes, status, subtotal, delivery_charge, grand_total, created_at",
     )
     .eq("order_number", orderNumber)
-    .single<OrderRecord>();
+    .maybeSingle<OrderRecord>();
 
-  if (orderError || !order) {
+  if (orderError) {
+    throw new Error(orderError.message);
+  }
+
+  if (!order) {
     return null;
   }
 
@@ -400,15 +404,19 @@ export const getSupabaseOrderByNumber = async (orderNumber: string) => {
           "method, status, amount, sender_number, transaction_id, verified_at, verified_by, rejection_reason",
         )
         .eq("order_id", order.id)
-        .single<PaymentRecord>(),
+        .maybeSingle<PaymentRecord>(),
     ]);
 
   if (itemsError) {
     throw new Error(itemsError.message);
   }
 
-  if (paymentError || !payment) {
-    throw new Error(paymentError?.message ?? "Payment not found.");
+  if (paymentError) {
+    throw new Error(paymentError.message);
+  }
+
+  if (!payment) {
+    throw new Error("Payment not found for this order.");
   }
 
   return mapSavedOrder(order, mapOrderItems(items ?? []), {

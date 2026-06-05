@@ -373,9 +373,10 @@ export const verifyAdminPayment = async (paymentId: string) => {
     })
     .eq("id", paymentId)
     .select("order_id")
-    .single<{ order_id: string }>();
+    .maybeSingle<{ order_id: string }>();
 
-  if (error || !payment) throw new Error(error?.message ?? "Payment not found.");
+  if (error) throw new Error(error.message);
+  if (!payment) throw new Error("Payment not found.");
 
   await updateAdminOrderStatus(payment.order_id, "processing");
 };
@@ -420,9 +421,10 @@ export const updateAdminProduct = async (
     .from("products")
     .select("image_path")
     .eq("id", productId)
-    .single<{ image_path: string | null }>();
+    .maybeSingle<{ image_path: string | null }>();
 
   if (existingProductError) throw new Error(existingProductError.message);
+  if (!existingProduct) throw new Error("Product not found.");
 
   const { error } = await supabase
     .from("products")
@@ -465,9 +467,10 @@ export const deleteAdminProduct = async (productId: string) => {
     .from("products")
     .select("image_path")
     .eq("id", productId)
-    .single<{ image_path: string | null }>();
+    .maybeSingle<{ image_path: string | null }>();
 
   if (productError) throw new Error(productError.message);
+  if (!product) throw new Error("Product not found.");
 
   if (product?.image_path) {
     await supabase.storage.from("product-images").remove([product.image_path]);
