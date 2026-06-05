@@ -115,10 +115,12 @@ export const createOrderItems = (lineItems: CartLineItem[]): OrderItem[] =>
 
     return {
       productId: item.productId,
+      productVariantId: item.variantId,
       slug: item.product.slug,
       name: item.product.name,
       inspiredBy: item.product.inspiredBy,
       size: item.size,
+      sizeMl: item.variant.sizeMl,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       lineTotal: itemTotal,

@@ -9,8 +9,11 @@ import type {
   AdminPayment,
   AdminProduct,
   AdminProductInput,
+  AdminProductVariant,
 } from "@/types/admin";
 import type { OrderStatus, PaymentMethod, PaymentStatus } from "@/types/order";
+
+type SupabaseServerClient = ReturnType<typeof createSupabaseServerClient>;
 
 type OrderRow = {
   id: string;
@@ -61,8 +64,19 @@ type ProductRow = {
   is_active: boolean;
 };
 
+type ProductVariantRow = {
+  id: string;
+  product_id: string;
+  size_ml: number;
+  stock_quantity: number | string;
+  low_stock_threshold: number | string | null;
+  updated_at: string | null;
+};
+
 const toNumber = (value: number | string | null | undefined) =>
   typeof value === "number" ? value : Number(value ?? 0);
+
+const toVariantSize = (sizeMl: number): 15 | 30 => (sizeMl === 30 ? 30 : 15);
 
 const mapOrder = (order: OrderRow, payments: PaymentRow[]): AdminOrder => {
   const payment = payments.find((entry) => entry.order_id === order.id);
@@ -106,19 +120,60 @@ const mapPayment = (
   };
 };
 
-const mapProduct = (product: ProductRow): AdminProduct => ({
-  id: product.id,
-  slug: product.slug,
-  name: product.name,
-  inspiredBy: product.inspired_by,
-  gender: product.gender,
-  size15mlPrice: toNumber(product.size_15ml_price),
-  size30mlPrice: toNumber(product.size_30ml_price),
-  stock: product.stock_quantity ?? product.stock ?? 0,
-  lowStockThreshold: product.low_stock_threshold ?? 5,
-  image: product.image,
-  isActive: product.is_active,
-});
+const mapVariant = (
+  variant: ProductVariantRow,
+  productById: Map<string, ProductRow>,
+): AdminProductVariant | null => {
+  const product = productById.get(variant.product_id);
+
+  if (!product) {
+    return null;
+  }
+
+  const sizeMl = toVariantSize(variant.size_ml);
+
+  return {
+    id: variant.id,
+    productId: variant.product_id,
+    productSlug: product.slug,
+    productName: product.name,
+    sizeMl,
+    sizeLabel: `${sizeMl}ml`,
+    stockQuantity: toNumber(variant.stock_quantity),
+    lowStockThreshold: toNumber(variant.low_stock_threshold ?? 5),
+    isActive: product.is_active,
+    updatedAt: variant.updated_at ?? undefined,
+  };
+};
+
+const mapProduct = (
+  product: ProductRow,
+  variants: AdminProductVariant[],
+): AdminProduct => {
+  const productVariants = variants
+    .filter((variant) => variant.productId === product.id)
+    .sort((first, second) => first.sizeMl - second.sizeMl);
+  const stock = productVariants.length
+    ? productVariants.reduce((total, variant) => total + variant.stockQuantity, 0)
+    : toNumber(product.stock_quantity ?? product.stock);
+
+  return {
+    id: product.id,
+    slug: product.slug,
+    name: product.name,
+    inspiredBy: product.inspired_by,
+    gender: product.gender,
+    size15mlPrice: toNumber(product.size_15ml_price),
+    size30mlPrice: toNumber(product.size_30ml_price),
+    stock,
+    lowStockThreshold:
+      productVariants[0]?.lowStockThreshold ??
+      toNumber(product.low_stock_threshold ?? 5),
+    image: product.image,
+    isActive: product.is_active,
+    variants: productVariants,
+  };
+};
 
 const productPayload = (product: AdminProductInput) => ({
   slug: product.slug,
@@ -135,50 +190,111 @@ const productPayload = (product: AdminProductInput) => ({
   updated_at: new Date().toISOString(),
 });
 
-const getLowStockProductsCount = (products: AdminProduct[]) =>
-  products.filter(
-    (product) => product.stock > 0 && product.stock <= product.lowStockThreshold,
+const getActiveVariants = (variants: AdminProductVariant[]) =>
+  variants.filter((variant) => variant.isActive);
+
+const getTotalInventoryUnits = (variants: AdminProductVariant[]) =>
+  getActiveVariants(variants).reduce(
+    (total, variant) => total + variant.stockQuantity,
+    0,
+  );
+
+const getLowStockProductsCount = (variants: AdminProductVariant[]) =>
+  getActiveVariants(variants).filter(
+    (variant) => variant.stockQuantity <= variant.lowStockThreshold,
   ).length;
 
-const getOutOfStockProductsCount = (products: AdminProduct[]) =>
-  products.filter((product) => product.stock <= 0).length;
+const getOutOfStockProductsCount = (variants: AdminProductVariant[]) =>
+  getActiveVariants(variants).filter((variant) => variant.stockQuantity === 0)
+    .length;
+
+const createDefaultProductVariants = async (
+  supabase: SupabaseServerClient,
+  productId: string,
+  product: AdminProductInput,
+) => {
+  const defaultStock = Math.max(0, Math.trunc(product.stock ?? 30));
+  const defaultThreshold = Math.max(0, Math.trunc(product.lowStockThreshold ?? 5));
+  const { error } = await supabase.from("product_variants").upsert(
+    [
+      {
+        product_id: productId,
+        size_ml: 15,
+        stock_quantity: defaultStock,
+        low_stock_threshold: defaultThreshold,
+      },
+      {
+        product_id: productId,
+        size_ml: 30,
+        stock_quantity: defaultStock,
+        low_stock_threshold: defaultThreshold,
+      },
+    ],
+    { onConflict: "product_id,size_ml" },
+  );
+
+  if (error) throw new Error(error.message);
+};
 
 export const getAdminDashboardData = async () => {
   const supabase = createSupabaseServerClient();
-  const [ordersResult, paymentsResult, customersResult, productsResult] =
-    await Promise.all([
-      supabase
-        .from("orders")
-        .select("id, order_number, customer_id, customer_name, customer_phone, status, grand_total, created_at")
-        .order("created_at", { ascending: false })
-        .returns<OrderRow[]>(),
-      supabase
-        .from("payments")
-        .select("id, order_id, method, status, sender_number, transaction_id, amount, created_at, verified_at, verified_by, rejection_reason")
-        .order("created_at", { ascending: false })
-        .returns<PaymentRow[]>(),
-      supabase
-        .from("customers")
-        .select("id, name, phone, email, district, created_at")
-        .order("created_at", { ascending: false })
-        .returns<CustomerRow[]>(),
-      supabase
-        .from("products")
-        .select("id, slug, name, inspired_by, gender, size_15ml_price, size_30ml_price, stock, stock_quantity, low_stock_threshold, image, is_active")
-        .order("name", { ascending: true })
-        .returns<ProductRow[]>(),
-    ]);
+  const [
+    ordersResult,
+    paymentsResult,
+    customersResult,
+    productsResult,
+    variantsResult,
+  ] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("id, order_number, customer_id, customer_name, customer_phone, status, grand_total, created_at")
+      .order("created_at", { ascending: false })
+      .returns<OrderRow[]>(),
+    supabase
+      .from("payments")
+      .select("id, order_id, method, status, sender_number, transaction_id, amount, created_at, verified_at, verified_by, rejection_reason")
+      .order("created_at", { ascending: false })
+      .returns<PaymentRow[]>(),
+    supabase
+      .from("customers")
+      .select("id, name, phone, email, district, created_at")
+      .order("created_at", { ascending: false })
+      .returns<CustomerRow[]>(),
+    supabase
+      .from("products")
+      .select("id, slug, name, inspired_by, gender, size_15ml_price, size_30ml_price, stock, stock_quantity, low_stock_threshold, image, is_active")
+      .order("name", { ascending: true })
+      .returns<ProductRow[]>(),
+    supabase
+      .from("product_variants")
+      .select("id, product_id, size_ml, stock_quantity, low_stock_threshold, updated_at")
+      .order("size_ml", { ascending: true })
+      .returns<ProductVariantRow[]>(),
+  ]);
 
   if (ordersResult.error) throw new Error(ordersResult.error.message);
   if (paymentsResult.error) throw new Error(paymentsResult.error.message);
   if (customersResult.error) throw new Error(customersResult.error.message);
   if (productsResult.error) throw new Error(productsResult.error.message);
+  if (variantsResult.error) throw new Error(variantsResult.error.message);
 
   const orders = ordersResult.data ?? [];
   const payments = paymentsResult.data ?? [];
   const customers = customersResult.data ?? [];
   const products = productsResult.data ?? [];
-  const mappedProducts = products.map(mapProduct);
+  const variants = variantsResult.data ?? [];
+  const productById = new Map(products.map((product) => [product.id, product]));
+  const mappedVariants = variants
+    .map((variant) => mapVariant(variant, productById))
+    .filter((variant): variant is AdminProductVariant => Boolean(variant))
+    .sort((first, second) =>
+      first.productName === second.productName
+        ? first.sizeMl - second.sizeMl
+        : first.productName.localeCompare(second.productName),
+    );
+  const mappedProducts = products.map((product) =>
+    mapProduct(product, mappedVariants),
+  );
   const mappedOrders = orders.map((order) => mapOrder(order, payments));
   const pendingPayments = payments
     .map((payment) => mapPayment(payment, orders))
@@ -192,8 +308,9 @@ export const getAdminDashboardData = async () => {
     pendingOrders: mappedOrders.filter((order) => order.status === "pending")
       .length,
     pendingPaymentVerifications: pendingPayments.length,
-    lowStockProducts: getLowStockProductsCount(mappedProducts),
-    outOfStockProducts: getOutOfStockProductsCount(mappedProducts),
+    totalInventoryUnits: getTotalInventoryUnits(mappedVariants),
+    lowStockProducts: getLowStockProductsCount(mappedVariants),
+    outOfStockProducts: getOutOfStockProductsCount(mappedVariants),
     recentOrders: mappedOrders.slice(0, 5),
   };
 
@@ -220,6 +337,7 @@ export const getAdminDashboardData = async () => {
     payments: pendingPayments,
     customers: mappedCustomers,
     products: mappedProducts,
+    variants: mappedVariants,
   };
 };
 
@@ -276,9 +394,15 @@ export const rejectAdminPayment = async (
 
 export const createAdminProduct = async (product: AdminProductInput) => {
   const supabase = createSupabaseServerClient();
-  const { error } = await supabase.from("products").insert(productPayload(product));
+  const { data, error } = await supabase
+    .from("products")
+    .insert(productPayload(product))
+    .select("id")
+    .single<{ id: string }>();
 
-  if (error) throw new Error(error.message);
+  if (error || !data) throw new Error(error?.message ?? "Unable to create product.");
+
+  await createDefaultProductVariants(supabase, data.id, product);
 };
 
 export const updateAdminProduct = async (
@@ -290,6 +414,24 @@ export const updateAdminProduct = async (
     .from("products")
     .update(productPayload(product))
     .eq("id", productId);
+
+  if (error) throw new Error(error.message);
+};
+
+export const updateAdminProductVariant = async (
+  variantId: string,
+  stockQuantity: number,
+  lowStockThreshold: number,
+) => {
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("product_variants")
+    .update({
+      stock_quantity: Math.max(0, Math.trunc(stockQuantity)),
+      low_stock_threshold: Math.max(0, Math.trunc(lowStockThreshold)),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", variantId);
 
   if (error) throw new Error(error.message);
 };

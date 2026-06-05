@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ProductActions } from "@/components/product/ProductActions";
 import { Card } from "@/components/ui/card";
+import { getProductTotalStock } from "@/lib/products";
 import type { Product } from "@/types/product";
 
 type ProductCardProps = {
@@ -10,6 +11,8 @@ type ProductCardProps = {
 
 // Catalog cards surface quick cart and wishlist actions while keeping details linked.
 export function ProductCard({ product }: ProductCardProps) {
+  const totalStock = getProductTotalStock(product);
+
   return (
     <Card className="group flex h-full flex-col overflow-hidden transition duration-300 hover:-translate-y-1 hover:shadow-soft">
       <Link href={`/products/${product.slug}`} className="block">
@@ -56,8 +59,18 @@ export function ProductCard({ product }: ProductCardProps) {
             </p>
           </div>
           <p className="text-xs font-medium text-muted">
-            {product.stock} in stock
+            {totalStock} total units
           </p>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {product.variants.map((variant) => (
+            <span
+              key={variant.id}
+              className="rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-muted"
+            >
+              {variant.sizeLabel}: {variant.stockQuantity}
+            </span>
+          ))}
         </div>
         <ProductActions product={product} />
       </div>

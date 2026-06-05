@@ -40,10 +40,12 @@ type OrderRecord = {
 
 type OrderItemRecord = {
   product_id: string;
+  product_variant_id: string | null;
   product_slug: string;
   product_name: string;
   inspired_by: string;
   size: "15ml" | "30ml";
+  size_ml: 15 | 30 | null;
   quantity: number;
   unit_price: number | string;
   line_total: number | string;
@@ -62,12 +64,22 @@ type PaymentRecord = {
   rejection_reason: string | null;
 };
 
-type ProductStockRecord = {
+type ProductVariantStockRecord = {
+  id: string;
+  size_ml: 15 | 30;
+  stock_quantity: number | null;
+};
+
+type ProductWithVariantStockRecord = {
+  id: string;
   slug: string;
   name: string;
-  stock_quantity: number | null;
-  stock: number | null;
   is_active: boolean | null;
+  product_variants: ProductVariantStockRecord[] | null;
+};
+
+type ValidatedOrderItem = OrderItem & {
+  productVariantId: string;
 };
 
 const toNumber = (value: number | string) =>
@@ -135,10 +147,12 @@ const mapOrderItems = (items: OrderItemRecord[]): OrderItem[] =>
   items.map((item) => ({
     // lineTotal and totalPrice intentionally point to the same stored total.
     productId: item.product_id,
+    productVariantId: item.product_variant_id ?? undefined,
     slug: item.product_slug,
     name: item.product_name,
     inspiredBy: item.inspired_by,
     size: item.size,
+    sizeMl: item.size_ml ?? (item.size === "15ml" ? 15 : 30),
     quantity: item.quantity,
     unitPrice: toNumber(item.unit_price),
     lineTotal: toNumber(item.line_total),
@@ -151,28 +165,44 @@ const normalizeOrderItemTotals = (item: OrderItem): OrderItem => {
 
   return {
     ...item,
+    sizeMl: item.sizeMl ?? (item.size === "15ml" ? 15 : 30),
     lineTotal: itemTotal,
     totalPrice: itemTotal,
   };
 };
 
-const getRequestedProductQuantities = (items: OrderItem[]) =>
+const getVariantRequestKey = (item: Pick<OrderItem, "slug" | "sizeMl">) =>
+  `${item.slug}:${item.sizeMl}`;
+
+const getRequestedVariantQuantities = (items: OrderItem[]) =>
   items.reduce((quantities, item) => {
-    quantities.set(item.slug, (quantities.get(item.slug) ?? 0) + item.quantity);
+    const key = getVariantRequestKey(item);
+
+    quantities.set(key, (quantities.get(key) ?? 0) + item.quantity);
 
     return quantities;
   }, new Map<string, number>());
 
-const validateProductStock = async (
+const validateProductVariantStock = async (
   supabase: SupabaseServerClient,
   items: OrderItem[],
-) => {
+): Promise<ValidatedOrderItem[]> => {
   if (items.some((item) => !Number.isFinite(item.quantity) || item.quantity <= 0)) {
     throw new StockValidationError("Cart item quantities must be greater than zero.");
   }
 
-  const requestedQuantities = getRequestedProductQuantities(items);
-  const slugs = Array.from(requestedQuantities.keys());
+  if (
+    items.some(
+      (item) =>
+        (item.sizeMl !== 15 && item.sizeMl !== 30) ||
+        item.size !== `${item.sizeMl}ml`,
+    )
+  ) {
+    throw new StockValidationError("Every cart item must include a valid size.");
+  }
+
+  const requestedQuantities = getRequestedVariantQuantities(items);
+  const slugs = Array.from(new Set(items.map((item) => item.slug)));
 
   if (slugs.length === 0) {
     throw new StockValidationError("Cart items are required.");
@@ -180,28 +210,39 @@ const validateProductStock = async (
 
   const { data, error } = await supabase
     .from("products")
-    .select("slug, name, stock_quantity, stock, is_active")
+    .select("id, slug, name, is_active, product_variants(id, size_ml, stock_quantity)")
     .in("slug", slugs)
-    .returns<ProductStockRecord[]>();
+    .returns<ProductWithVariantStockRecord[]>();
 
   if (error) {
     throw new Error(error.message);
   }
 
-  const stockBySlug = new Map((data ?? []).map((product) => [product.slug, product]));
-  const stockProblems = slugs.flatMap((slug) => {
-    const requestedQuantity = requestedQuantities.get(slug) ?? 0;
-    const product = stockBySlug.get(slug);
+  const stockByVariantKey = new Map<string, ProductVariantStockRecord>();
+  const productBySlug = new Map((data ?? []).map((product) => [product.slug, product]));
+  const stockProblems = items.flatMap((item) => {
+    const product = productBySlug.get(item.slug);
 
     if (!product || product.is_active === false) {
-      return [`${slug} is no longer available.`];
+      return [`${item.name} is no longer available.`];
     }
 
-    const availableStock = product.stock_quantity ?? product.stock ?? 0;
+    const variant = (product.product_variants ?? []).find(
+      (entry) => entry.size_ml === item.sizeMl,
+    );
+
+    if (!variant) {
+      return [`${item.name} ${item.size} is no longer available.`];
+    }
+
+    stockByVariantKey.set(getVariantRequestKey(item), variant);
+    const requestedQuantity =
+      requestedQuantities.get(getVariantRequestKey(item)) ?? 0;
+    const availableStock = variant.stock_quantity ?? 0;
 
     if (requestedQuantity > availableStock) {
       return [
-        `${product.name} has only ${availableStock} unit${
+        `${product.name} ${item.size} has only ${availableStock} unit${
           availableStock === 1 ? "" : "s"
         } left. You requested ${requestedQuantity}.`,
       ];
@@ -213,19 +254,37 @@ const validateProductStock = async (
   if (stockProblems.length > 0) {
     throw new StockValidationError(stockProblems.join(" "));
   }
+
+  return items.map((item) => {
+    const variant = stockByVariantKey.get(getVariantRequestKey(item));
+
+    if (!variant) {
+      throw new StockValidationError(`${item.name} ${item.size} is no longer available.`);
+    }
+
+    return {
+      ...item,
+      productVariantId: variant.id,
+    };
+  });
 };
 
-const deductProductStock = async (
+const deductProductVariantStock = async (
   supabase: SupabaseServerClient,
-  items: OrderItem[],
+  items: ValidatedOrderItem[],
 ) => {
-  const requestedQuantities = getRequestedProductQuantities(items);
+  const requestedQuantities = getRequestedVariantQuantities(items);
 
-  for (const [slug, quantity] of requestedQuantities) {
-    const { error } = await supabase.rpc("decrement_product_stock", {
-      p_product_slug: slug,
-      p_quantity: quantity,
-    });
+  for (const [key, quantity] of requestedQuantities) {
+    const [slug, sizeMl] = key.split(":");
+    const { error } = await supabase.rpc(
+      "decrement_product_variant_stock",
+      {
+        p_product_slug: slug,
+        p_size_ml: Number(sizeMl),
+        p_quantity: quantity,
+      },
+    );
 
     if (error) {
       throw new StockValidationError(error.message);
@@ -240,7 +299,7 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
   const normalizedItems = payload.items.map(normalizeOrderItemTotals);
   const orderStatus = getOrderStatusForPaymentMethod(payload.payment.method);
   const paymentStatus = getPaymentStatusForMethod(payload.payment.method);
-  await validateProductStock(supabase, normalizedItems);
+  const validatedItems = await validateProductVariantStock(supabase, normalizedItems);
   const customer = await createCustomer(supabase, payload.customer);
 
   const { data: order, error: orderError } = await supabase
@@ -269,13 +328,15 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
   }
 
   const { error: itemsError } = await supabase.from("order_items").insert(
-    normalizedItems.map((item) => ({
+    validatedItems.map((item) => ({
       order_id: order.id,
       product_id: item.productId,
+      product_variant_id: item.productVariantId,
       product_slug: item.slug,
       product_name: item.name,
       inspired_by: item.inspiredBy,
       size: item.size,
+      size_ml: item.sizeMl,
       quantity: item.quantity,
       unit_price: item.unitPrice,
       line_total: item.lineTotal,
@@ -301,9 +362,9 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
     throw new Error(paymentError.message);
   }
 
-  await deductProductStock(supabase, normalizedItems);
+  await deductProductVariantStock(supabase, validatedItems);
 
-  return mapSavedOrder(order, normalizedItems, {
+  return mapSavedOrder(order, validatedItems, {
     ...payload.payment,
     status: paymentStatus,
     amount: payload.totals.grandTotal,
@@ -329,7 +390,7 @@ export const getSupabaseOrderByNumber = async (orderNumber: string) => {
       supabase
         .from("order_items")
         .select(
-          "product_id, product_slug, product_name, inspired_by, size, quantity, unit_price, line_total, total_price, image",
+          "product_id, product_variant_id, product_slug, product_name, inspired_by, size, size_ml, quantity, unit_price, line_total, total_price, image",
         )
         .eq("order_id", order.id)
         .returns<OrderItemRecord[]>(),

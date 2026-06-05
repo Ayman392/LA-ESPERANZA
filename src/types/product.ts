@@ -1,4 +1,16 @@
 export type ProductGender = "Men" | "Women" | "Unisex";
+export type ProductSizeMl = 15 | 30;
+export type ProductSizeLabel = `${ProductSizeMl}ml`;
+
+export type ProductVariant = {
+  id: string;
+  productId: string;
+  sizeMl: ProductSizeMl;
+  sizeLabel: ProductSizeLabel;
+  price: number;
+  stockQuantity: number;
+  lowStockThreshold: number;
+};
 
 export type Product = {
   id: string;
@@ -8,6 +20,7 @@ export type Product = {
   gender: ProductGender;
   size15mlPrice: number;
   size30mlPrice: number;
+  variants: ProductVariant[];
   stock: number;
   topNotes: string[];
   middleNotes: string[];

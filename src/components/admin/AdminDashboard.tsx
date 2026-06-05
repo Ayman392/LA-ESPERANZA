@@ -32,6 +32,7 @@ import type {
   AdminPayment,
   AdminProduct,
   AdminProductInput,
+  AdminProductVariant,
   AdminSection,
 } from "@/types/admin";
 
@@ -41,6 +42,7 @@ type AdminPayload = {
   payments: AdminPayment[];
   customers: AdminCustomer[];
   products: AdminProduct[];
+  variants: AdminProductVariant[];
 };
 
 type AdminContextValue = {
@@ -50,7 +52,7 @@ type AdminContextValue = {
   setActiveSection: (section: AdminSection) => void;
   isRefreshing: boolean;
   filteredOrders: AdminOrder[];
-  lowStockProducts: AdminProduct[];
+  lowStockVariants: AdminProductVariant[];
   metrics: Array<[string, string | number]>;
   search: string;
   setSearch: (search: string) => void;
@@ -62,7 +64,7 @@ type AdminContextValue = {
   setEditingProductId: (productId: string | null) => void;
   updatingOrderIds: Set<string>;
   updatingPaymentIds: Set<string>;
-  updatingProductIds: Set<string>;
+  updatingVariantIds: Set<string>;
   updateOrderStatus: (orderId: string, status: AdminOrderStatus) => Promise<void>;
   updatePayment: (
     payment: AdminPayment,
@@ -70,8 +72,8 @@ type AdminContextValue = {
     rejectionReason?: string,
   ) => Promise<void>;
   updateInventoryStock: (
-    productId: string,
-    stock: number,
+    variantId: string,
+    stockQuantity: number,
     lowStockThreshold: number,
   ) => Promise<void>;
   refreshDashboard: () => Promise<void>;
@@ -97,7 +99,7 @@ const emptyProduct: AdminProductInput = {
   gender: "Unisex",
   size15mlPrice: 0,
   size30mlPrice: 0,
-  stock: 0,
+  stock: 30,
   lowStockThreshold: 5,
   image: "/products/flame.png",
   isActive: true,
@@ -109,6 +111,7 @@ const metricIcons = [
   Package,
   Users,
   AlertTriangle,
+  Package,
   Package,
 ];
 
@@ -145,7 +148,7 @@ const callAdminApi = async (path: string, init?: RequestInit) => {
 const calculateDashboardMetrics = (
   orders: AdminOrder[],
   payments: AdminPayment[],
-  products: AdminProduct[] = [],
+  variants: AdminProductVariant[] = [],
 ): AdminDashboardSummary => ({
   totalOrders: orders.length,
   totalRevenue: orders
@@ -160,10 +163,17 @@ const calculateDashboardMetrics = (
       (!relatedOrder || relatedOrder.status === "payment_verification")
     );
   }).length,
-  lowStockProducts: products.filter(
-    (product) => product.stock > 0 && product.stock <= product.lowStockThreshold,
+  totalInventoryUnits: variants
+    .filter((variant) => variant.isActive)
+    .reduce((total, variant) => total + variant.stockQuantity, 0),
+  lowStockProducts: variants.filter(
+    (variant) =>
+      variant.isActive &&
+      variant.stockQuantity <= variant.lowStockThreshold,
   ).length,
-  outOfStockProducts: products.filter((product) => product.stock <= 0).length,
+  outOfStockProducts: variants.filter(
+    (variant) => variant.isActive && variant.stockQuantity === 0,
+  ).length,
   recentOrders: orders.slice(0, 5),
 });
 
@@ -172,7 +182,7 @@ const withDashboardMetrics = (currentData: AdminPayload): AdminPayload => ({
   dashboard: calculateDashboardMetrics(
     currentData.orders,
     currentData.payments,
-    currentData.products,
+    currentData.variants,
   ),
 });
 
@@ -225,23 +235,37 @@ const removePaymentLocally = (
   return withDashboardMetrics(nextData);
 };
 
-const updateProductInventoryLocally = (
+const updateVariantInventoryLocally = (
   currentData: AdminPayload,
-  productId: string,
-  stock: number,
+  variantId: string,
+  stockQuantity: number,
   lowStockThreshold: number,
 ): AdminPayload => {
-  const products = currentData.products.map((product) =>
-    product.id === productId
+  const variants = currentData.variants.map((variant) =>
+    variant.id === variantId
       ? {
-          ...product,
-          stock,
+          ...variant,
+          stockQuantity,
           lowStockThreshold,
         }
-      : product,
+      : variant,
   );
+  const products = currentData.products.map((product) => {
+    const productVariants = variants.filter(
+      (variant) => variant.productId === product.id,
+    );
 
-  return withDashboardMetrics({ ...currentData, products });
+    return {
+      ...product,
+      variants: productVariants,
+      stock: productVariants.reduce(
+        (total, variant) => total + variant.stockQuantity,
+        0,
+      ),
+    };
+  });
+
+  return withDashboardMetrics({ ...currentData, products, variants });
 };
 
 function useAdminDashboard() {
@@ -279,7 +303,7 @@ export function AdminDashboardProvider({
   const [updatingPaymentIds, setUpdatingPaymentIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [updatingProductIds, setUpdatingProductIds] = useState<Set<string>>(
+  const [updatingVariantIds, setUpdatingVariantIds] = useState<Set<string>>(
     () => new Set(),
   );
   const hasLoadedDashboard = useRef(false);
@@ -365,17 +389,18 @@ export function AdminDashboardProvider({
     });
   }, [data?.orders, search, statusFilter]);
 
-  const lowStockProducts = useMemo(
+  const lowStockVariants = useMemo(
     () =>
-      (data?.products ?? []).filter(
-        (product) =>
-          product.stock > 0 && product.stock <= product.lowStockThreshold,
+      (data?.variants ?? []).filter(
+        (variant) =>
+          variant.isActive &&
+          variant.stockQuantity <= variant.lowStockThreshold,
       ),
-    [data?.products],
+    [data?.variants],
   );
 
   const dashboardMetrics = data
-    ? calculateDashboardMetrics(data.orders, data.payments, data.products)
+    ? calculateDashboardMetrics(data.orders, data.payments, data.variants)
     : null;
 
   const metrics: Array<[string, string | number]> = dashboardMetrics
@@ -384,6 +409,7 @@ export function AdminDashboardProvider({
         ["Total Revenue", `BDT ${dashboardMetrics.totalRevenue}`],
         ["Pending Orders", dashboardMetrics.pendingOrders],
         ["Payment Checks", dashboardMetrics.pendingPaymentVerifications],
+        ["Total Inventory Units", dashboardMetrics.totalInventoryUnits],
         ["Low Stock Products", dashboardMetrics.lowStockProducts],
         ["Out of Stock Products", dashboardMetrics.outOfStockProducts],
       ]
@@ -515,29 +541,29 @@ export function AdminDashboardProvider({
   };
 
   const updateInventoryStock = async (
-    productId: string,
-    stock: number,
+    variantId: string,
+    stockQuantity: number,
     lowStockThreshold: number,
   ) => {
-    const product = data?.products.find((entry) => entry.id === productId);
-    const safeStock = Math.max(0, Math.trunc(stock));
+    const variant = data?.variants.find((entry) => entry.id === variantId);
+    const safeStock = Math.max(0, Math.trunc(stockQuantity));
     const safeThreshold = Math.max(0, Math.trunc(lowStockThreshold));
 
-    if (!data || !product || updatingProductIds.has(productId)) {
+    if (!data || !variant || updatingVariantIds.has(variantId)) {
       return;
     }
 
     setMessage("");
-    setUpdatingProductIds((current) => {
+    setUpdatingVariantIds((current) => {
       const next = new Set(current);
-      next.add(productId);
+      next.add(variantId);
       return next;
     });
     setData((current) =>
       current
-        ? updateProductInventoryLocally(
+        ? updateVariantInventoryLocally(
             current,
-            productId,
+            variantId,
             safeStock,
             safeThreshold,
           )
@@ -545,22 +571,21 @@ export function AdminDashboardProvider({
     );
 
     try {
-      await callAdminApi(`/api/admin/products/${productId}`, {
+      await callAdminApi(`/api/admin/inventory/${variantId}`, {
         method: "PATCH",
         body: JSON.stringify({
-          ...product,
-          stock: safeStock,
+          stockQuantity: safeStock,
           lowStockThreshold: safeThreshold,
         }),
       });
     } catch (error) {
       setData((current) =>
         current
-          ? updateProductInventoryLocally(
+          ? updateVariantInventoryLocally(
               current,
-              productId,
-              product.stock,
-              product.lowStockThreshold,
+              variantId,
+              variant.stockQuantity,
+              variant.lowStockThreshold,
             )
           : current,
       );
@@ -568,9 +593,9 @@ export function AdminDashboardProvider({
         error instanceof Error ? error.message : "Unable to update stock.",
       );
     } finally {
-      setUpdatingProductIds((current) => {
+      setUpdatingVariantIds((current) => {
         const next = new Set(current);
-        next.delete(productId);
+        next.delete(variantId);
         return next;
       });
     }
@@ -632,7 +657,7 @@ export function AdminDashboardProvider({
         setActiveSection,
         isRefreshing,
         filteredOrders,
-        lowStockProducts,
+        lowStockVariants,
         metrics,
         search,
         setSearch,
@@ -644,7 +669,7 @@ export function AdminDashboardProvider({
         setEditingProductId,
         updatingOrderIds,
         updatingPaymentIds,
-        updatingProductIds,
+        updatingVariantIds,
         updateOrderStatus,
         updatePayment,
         updateInventoryStock,
@@ -793,7 +818,7 @@ export function AdminDashboardOverview() {
   const recentOrders = calculateDashboardMetrics(
     data.orders,
     data.payments,
-    data.products,
+    data.variants,
   ).recentOrders;
 
   return (
@@ -1021,7 +1046,19 @@ export function AdminProductManagement() {
           products={data.products}
           onEdit={(product) => {
             setEditingProductId(product.id);
-            setProductForm(product);
+            setProductForm({
+              id: product.id,
+              slug: product.slug,
+              name: product.name,
+              inspiredBy: product.inspiredBy,
+              gender: product.gender,
+              size15mlPrice: product.size15mlPrice,
+              size30mlPrice: product.size30mlPrice,
+              stock: product.stock,
+              lowStockThreshold: product.lowStockThreshold,
+              image: product.image,
+              isActive: product.isActive,
+            });
           }}
           onDelete={(productId) => void deleteProduct(productId)}
         />
@@ -1034,11 +1071,13 @@ export function AdminInventoryPage() {
   const {
     data,
     message,
-    lowStockProducts,
-    updatingProductIds,
+    lowStockVariants,
+    updatingVariantIds,
     updateInventoryStock,
   } = useAdminDashboard();
-  const outOfStockProducts = data.products.filter((product) => product.stock <= 0);
+  const outOfStockVariants = data.variants.filter(
+    (variant) => variant.isActive && variant.stockQuantity === 0,
+  );
 
   return (
     <AdminPageShell eyebrow="Inventory" title="Stock inventory" message={message}>
@@ -1049,10 +1088,10 @@ export function AdminInventoryPage() {
               <AlertTriangle aria-hidden className="h-5 w-5 text-amber-700" />
               <div>
                 <p className="font-semibold text-amber-900">
-                  {lowStockProducts.length} low stock warning
+                  {lowStockVariants.length} low stock warning
                 </p>
                 <p className="mt-1 text-sm text-amber-800">
-                  Products at or below their threshold.
+                  Size variants at or below their threshold.
                 </p>
               </div>
             </div>
@@ -1062,18 +1101,18 @@ export function AdminInventoryPage() {
               <Package aria-hidden className="h-5 w-5 text-red-700" />
               <div>
                 <p className="font-semibold text-red-900">
-                  {outOfStockProducts.length} out of stock
+                  {outOfStockVariants.length} out of stock
                 </p>
                 <p className="mt-1 text-sm text-red-800">
-                  Products with no sellable units left.
+                  Size variants with no sellable units left.
                 </p>
               </div>
             </div>
           </div>
         </div>
         <InventoryTable
-          products={data.products}
-          updatingProductIds={updatingProductIds}
+          variants={data.variants}
+          updatingVariantIds={updatingVariantIds}
           onUpdateStock={updateInventoryStock}
         />
       </section>
@@ -1272,7 +1311,7 @@ function ProductEditor({
           type="number"
           value={product.stock}
           onChange={(event) => update("stock", Number(event.target.value))}
-          placeholder="Stock"
+          placeholder="Default variant stock"
         />
         <input
           className={inputClass}
@@ -1312,6 +1351,36 @@ function ProductEditor({
   );
 }
 
+const getInventoryStatus = (variant: AdminProductVariant) => {
+  if (!variant.isActive) {
+    return "Hidden";
+  }
+
+  if (variant.stockQuantity === 0) {
+    return "Out of Stock";
+  }
+
+  if (variant.stockQuantity <= variant.lowStockThreshold) {
+    return "Low Stock";
+  }
+
+  return "In Stock";
+};
+
+const getInventoryStatusClass = (variant: AdminProductVariant) => {
+  const status = getInventoryStatus(variant);
+
+  if (status === "Out of Stock") {
+    return "text-red-700";
+  }
+
+  if (status === "Low Stock") {
+    return "text-amber-700";
+  }
+
+  return status === "Hidden" ? "text-muted" : "text-charcoal";
+};
+
 function ProductTable({
   products,
   onEdit,
@@ -1325,12 +1394,16 @@ function ProductTable({
     return <EmptyState title="No products found" />;
   }
 
+  const variantRows = products.flatMap((product) =>
+    product.variants.map((variant) => ({ product, variant })),
+  );
+
   return (
     <div className="overflow-hidden rounded-card border border-border bg-surface-strong shadow-soft">
-      {products.map((product) => (
+      {variantRows.map(({ product, variant }) => (
         <div
-          key={product.id}
-          className="grid gap-4 border-b border-border p-4 last:border-b-0 md:grid-cols-[1fr_8rem_8rem_auto]"
+          key={variant.id}
+          className="grid gap-4 border-b border-border p-4 last:border-b-0 md:grid-cols-[1.2fr_5rem_8rem_9rem_9rem_auto]"
         >
           <div>
             <p className="font-semibold text-charcoal">{product.name}</p>
@@ -1338,15 +1411,17 @@ function ProductTable({
               {product.gender} | {product.inspiredBy}
             </p>
           </div>
-          <p className="text-sm text-muted">Stock {product.stock}</p>
+          <p className="text-sm font-semibold text-charcoal">
+            {variant.sizeLabel}
+          </p>
           <p className="text-sm text-muted">
-            {product.stock <= 0
-              ? "Out of stock"
-              : product.stock <= product.lowStockThreshold
-              ? "Low stock"
-              : product.isActive
-                ? "Active"
-                : "Hidden"}
+            Stock {variant.stockQuantity}
+          </p>
+          <p className="text-sm text-muted">
+            Threshold {variant.lowStockThreshold}
+          </p>
+          <p className={`text-sm font-semibold ${getInventoryStatusClass(variant)}`}>
+            {getInventoryStatus(variant)}
           </p>
           {onEdit || onDelete ? (
             <div className="flex gap-2">
@@ -1377,15 +1452,15 @@ function ProductTable({
 }
 
 function InventoryTable({
-  products,
-  updatingProductIds,
+  variants,
+  updatingVariantIds,
   onUpdateStock,
 }: {
-  products: AdminProduct[];
-  updatingProductIds: Set<string>;
+  variants: AdminProductVariant[];
+  updatingVariantIds: Set<string>;
   onUpdateStock: (
-    productId: string,
-    stock: number,
+    variantId: string,
+    stockQuantity: number,
     lowStockThreshold: number,
   ) => Promise<void>;
 }) {
@@ -1393,49 +1468,97 @@ function InventoryTable({
     Record<string, { stock: string; lowStockThreshold: string }>
   >({});
 
-  if (products.length === 0) {
-    return <EmptyState title="No products found" />;
+  if (variants.length === 0) {
+    return <EmptyState title="No inventory variants found" />;
   }
 
   const updateDraft = (
-    productId: string,
+    variantId: string,
     key: "stock" | "lowStockThreshold",
     value: string,
   ) => {
     setDrafts((current) => ({
       ...current,
-      [productId]: {
-        stock: current[productId]?.stock ?? "0",
-        lowStockThreshold: current[productId]?.lowStockThreshold ?? "5",
+      [variantId]: {
+        stock: current[variantId]?.stock ?? "0",
+        lowStockThreshold: current[variantId]?.lowStockThreshold ?? "5",
         [key]: value,
+      },
+    }));
+  };
+
+  const setDraftStock = (variant: AdminProductVariant, stockQuantity: number) => {
+    setDrafts((current) => ({
+      ...current,
+      [variant.id]: {
+        stock: String(Math.max(0, stockQuantity)),
+        lowStockThreshold:
+          current[variant.id]?.lowStockThreshold ??
+          String(variant.lowStockThreshold),
       },
     }));
   };
 
   return (
     <div className="overflow-hidden rounded-card border border-border bg-surface-strong shadow-soft">
-      {products.map((product) => {
-        const draft = drafts[product.id] ?? {
-          stock: String(product.stock),
-          lowStockThreshold: String(product.lowStockThreshold),
+      {variants.map((variant) => {
+        const draft = drafts[variant.id] ?? {
+          stock: String(variant.stockQuantity),
+          lowStockThreshold: String(variant.lowStockThreshold),
         };
         const draftStock = Number(draft.stock);
         const draftThreshold = Number(draft.lowStockThreshold);
-        const isUpdating = updatingProductIds.has(product.id);
-        const isOutOfStock = product.stock <= 0;
-        const isLowStock =
-          product.stock > 0 && product.stock <= product.lowStockThreshold;
+        const isUpdating = updatingVariantIds.has(variant.id);
 
         return (
           <div
-            key={product.id}
-            className="grid gap-4 border-b border-border p-4 last:border-b-0 xl:grid-cols-[1.2fr_8rem_10rem_10rem_auto]"
+            key={variant.id}
+            className="grid gap-4 border-b border-border p-4 last:border-b-0 xl:grid-cols-[1.2fr_8rem_10rem_10rem_9rem_auto]"
           >
             <div>
-              <p className="font-semibold text-charcoal">{product.name}</p>
+              <p className="font-semibold text-charcoal">{variant.productName}</p>
               <p className="mt-1 text-sm text-muted">
-                {product.gender} | {product.inspiredBy}
+                Size {variant.sizeLabel} | {variant.productSlug}
               </p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase text-accent">
+                Adjust
+              </p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  disabled={isUpdating || variant.stockQuantity <= 0}
+                  onClick={() => {
+                    const nextStock = Math.max(0, variant.stockQuantity - 1);
+                    setDraftStock(variant, nextStock);
+                    void onUpdateStock(
+                      variant.id,
+                      nextStock,
+                      variant.lowStockThreshold,
+                    );
+                  }}
+                  className="h-10 w-10 rounded-full border border-border bg-background text-sm font-semibold text-charcoal disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  -
+                </button>
+                <button
+                  type="button"
+                  disabled={isUpdating}
+                  onClick={() => {
+                    const nextStock = variant.stockQuantity + 1;
+                    setDraftStock(variant, nextStock);
+                    void onUpdateStock(
+                      variant.id,
+                      nextStock,
+                      variant.lowStockThreshold,
+                    );
+                  }}
+                  className="h-10 w-10 rounded-full border border-border bg-background text-sm font-semibold text-charcoal disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  +
+                </button>
+              </div>
             </div>
             <div>
               <p className="text-xs font-semibold uppercase text-accent">
@@ -1447,7 +1570,7 @@ function InventoryTable({
                 value={draft.stock}
                 disabled={isUpdating}
                 onChange={(event) =>
-                  updateDraft(product.id, "stock", event.target.value)
+                  updateDraft(variant.id, "stock", event.target.value)
                 }
                 className={`${inputClass} mt-2 w-full disabled:cursor-not-allowed disabled:opacity-60`}
               />
@@ -1462,7 +1585,7 @@ function InventoryTable({
                 value={draft.lowStockThreshold}
                 disabled={isUpdating}
                 onChange={(event) =>
-                  updateDraft(product.id, "lowStockThreshold", event.target.value)
+                  updateDraft(variant.id, "lowStockThreshold", event.target.value)
                 }
                 className={`${inputClass} mt-2 w-full disabled:cursor-not-allowed disabled:opacity-60`}
               />
@@ -1472,23 +1595,9 @@ function InventoryTable({
                 Status
               </p>
               <p
-                className={`mt-3 text-sm font-semibold ${
-                  isOutOfStock
-                    ? "text-red-700"
-                    : isLowStock
-                      ? "text-amber-700"
-                      : product.isActive
-                        ? "text-charcoal"
-                        : "text-muted"
-                }`}
+                className={`mt-3 text-sm font-semibold ${getInventoryStatusClass(variant)}`}
               >
-                {isOutOfStock
-                  ? "Out of stock"
-                  : isLowStock
-                    ? "Low stock"
-                    : product.isActive
-                      ? "In stock"
-                      : "Hidden"}
+                {getInventoryStatus(variant)}
               </p>
             </div>
             <div className="flex items-end">
@@ -1500,7 +1609,7 @@ function InventoryTable({
                   !Number.isFinite(draftThreshold)
                 }
                 onClick={() =>
-                  void onUpdateStock(product.id, draftStock, draftThreshold)
+                  void onUpdateStock(variant.id, draftStock, draftThreshold)
                 }
                 className="h-10 rounded-full bg-charcoal px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
               >

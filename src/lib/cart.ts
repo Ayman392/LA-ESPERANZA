@@ -1,4 +1,4 @@
-import { products } from "@/lib/products";
+import { getProductVariant, products } from "@/lib/products";
 import type { CartItem, CartLineItem, CartProductSize } from "@/types/cart";
 import type { Product } from "@/types/product";
 
@@ -10,17 +10,24 @@ const getCartItemKey = (item: Pick<CartItem, "productId" | "size">) =>
 const findProduct = (productId: string) =>
   products.find((product) => product.id === productId);
 
-const normalizeQuantity = (quantity: number, product?: Product) => {
+const normalizeQuantity = (
+  quantity: number,
+  product?: Product,
+  size?: CartProductSize,
+) => {
   const safeQuantity = Number.isFinite(quantity) ? Math.trunc(quantity) : 1;
   const minimumQuantity = Math.max(1, safeQuantity);
+  const variant = product && size ? getProductVariant(product, size) : undefined;
 
-  return product ? Math.min(minimumQuantity, product.stock) : minimumQuantity;
+  return variant
+    ? Math.min(minimumQuantity, variant.stockQuantity)
+    : minimumQuantity;
 };
 
 export const getProductUnitPrice = (
   product: Product,
   size: CartProductSize,
-) => (size === "15ml" ? product.size15mlPrice : product.size30mlPrice);
+) => getProductVariant(product, size)?.price ?? 0;
 
 // Pure cart helpers keep persistence separate from cart math and mutations.
 export const addCartItem = (
@@ -30,8 +37,9 @@ export const addCartItem = (
   quantity = 1,
 ) => {
   const product = findProduct(productId);
+  const variant = product ? getProductVariant(product, size) : undefined;
 
-  if (!product || product.stock <= 0) {
+  if (!product || !variant || variant.stockQuantity <= 0) {
     return items;
   }
 
@@ -44,7 +52,7 @@ export const addCartItem = (
       {
         productId,
         size,
-        quantity: normalizeQuantity(quantity, product),
+        quantity: normalizeQuantity(quantity, product, size),
       },
     ];
   }
@@ -53,7 +61,7 @@ export const addCartItem = (
     getCartItemKey(item) === itemKey
       ? {
           ...item,
-          quantity: normalizeQuantity(item.quantity + quantity, product),
+          quantity: normalizeQuantity(item.quantity + quantity, product, size),
         }
       : item,
   );
@@ -80,7 +88,7 @@ export const updateCartItemQuantity = (
 
   return items.map((item) =>
     getCartItemKey(item) === getCartItemKey({ productId, size })
-      ? { ...item, quantity: normalizeQuantity(quantity, product) }
+      ? { ...item, quantity: normalizeQuantity(quantity, product, size) }
       : item,
   );
 };
@@ -128,13 +136,21 @@ export const hydrateCartProducts = (items: CartItem[]): CartLineItem[] =>
         return null;
       }
 
-      const quantity = normalizeQuantity(item.quantity, product);
-      const unitPrice = getProductUnitPrice(product, item.size);
+      const variant = getProductVariant(product, item.size);
+
+      if (!variant) {
+        return null;
+      }
+
+      const quantity = normalizeQuantity(item.quantity, product, item.size);
+      const unitPrice = variant.price;
 
       return {
         ...item,
         quantity,
         product,
+        variant,
+        variantId: variant.id,
         unitPrice,
         lineTotal: unitPrice * quantity,
       };

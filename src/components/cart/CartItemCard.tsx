@@ -82,7 +82,7 @@ export function CartItemCard({
               aria-label={`${item.product.name} quantity`}
               type="number"
               min={1}
-              max={item.product.stock}
+              max={item.variant.stockQuantity}
               value={item.quantity}
               onChange={(event) => onUpdateQuantity(Number(event.target.value))}
               className="h-9 w-14 bg-transparent text-center text-sm font-semibold text-charcoal outline-none"

@@ -7,7 +7,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { ProductActions } from "@/components/product/ProductActions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getProductBySlug, products } from "@/lib/products";
+import { getProductBySlug, getProductTotalStock, products } from "@/lib/products";
 
 type ProductDetailPageProps = {
   params: Promise<{
@@ -54,6 +54,7 @@ export default async function ProductDetailPage({
     { label: "Middle notes", notes: product.middleNotes },
     { label: "Base notes", notes: product.baseNotes },
   ];
+  const totalStock = getProductTotalStock(product);
 
   return (
     <main className="min-h-screen">
@@ -115,7 +116,7 @@ export default async function ProductDetailPage({
                   Stock
                 </p>
                 <p className="mt-2 text-lg font-semibold text-charcoal">
-                  {product.stock} units
+                  {totalStock} total units
                 </p>
               </Card>
             </div>
@@ -125,17 +126,19 @@ export default async function ProductDetailPage({
                 Sizes and prices
               </p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {[
-                  ["15ml", product.size15mlPrice],
-                  ["30ml", product.size30mlPrice],
-                ].map(([size, price]) => (
+                {product.variants.map((variant) => (
                   <div
-                    key={size}
+                    key={variant.id}
                     className="rounded-card border border-border bg-background p-4"
                   >
-                    <p className="text-sm text-muted">{size}</p>
+                    <p className="text-sm text-muted">{variant.sizeLabel}</p>
                     <p className="mt-1 text-2xl font-semibold text-charcoal">
-                      BDT {price}
+                      BDT {variant.price}
+                    </p>
+                    <p className="mt-2 text-xs font-semibold uppercase text-accent">
+                      {variant.stockQuantity > 0
+                        ? `${variant.stockQuantity} in stock`
+                        : "Out of stock"}
                     </p>
                   </div>
                 ))}

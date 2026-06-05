@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ShoppingBag, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/hooks/useCart";
+import { getProductVariant } from "@/lib/products";
 import type { WishlistProduct } from "@/types/wishlist";
 
 type WishlistItemCardProps = {
@@ -14,6 +15,9 @@ type WishlistItemCardProps = {
 
 export function WishlistItemCard({ item, onRemove }: WishlistItemCardProps) {
   const { addItem } = useCart();
+  const defaultVariant = getProductVariant(item.product, "15ml");
+  const isDefaultOutOfStock =
+    !defaultVariant || defaultVariant.stockQuantity <= 0;
 
   return (
     <motion.article
@@ -55,11 +59,12 @@ export function WishlistItemCard({ item, onRemove }: WishlistItemCardProps) {
         <div className="mt-5 grid grid-cols-[1fr_auto] gap-3">
           <button
             type="button"
+            disabled={isDefaultOutOfStock}
             onClick={() => addItem(item.product.id, "15ml")}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-charcoal px-4 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-charcoal px-4 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ShoppingBag aria-hidden className="h-4 w-4" />
-            Add 15ml
+            {isDefaultOutOfStock ? "Out of stock" : "Add 15ml"}
           </button>
           <button
             type="button"

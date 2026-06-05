@@ -71,9 +71,23 @@ export type AdminProduct = {
   lowStockThreshold: number;
   image: string;
   isActive: boolean;
+  variants: AdminProductVariant[];
 };
 
-export type AdminProductInput = Omit<AdminProduct, "id"> & {
+export type AdminProductVariant = {
+  id: string;
+  productId: string;
+  productSlug: string;
+  productName: string;
+  sizeMl: 15 | 30;
+  sizeLabel: "15ml" | "30ml";
+  stockQuantity: number;
+  lowStockThreshold: number;
+  isActive: boolean;
+  updatedAt?: string;
+};
+
+export type AdminProductInput = Omit<AdminProduct, "id" | "variants"> & {
   id?: string;
 };
 
@@ -82,6 +96,7 @@ export type AdminDashboardSummary = {
   totalRevenue: number;
   pendingOrders: number;
   pendingPaymentVerifications: number;
+  totalInventoryUnits: number;
   lowStockProducts: number;
   outOfStockProducts: number;
   recentOrders: AdminOrder[];

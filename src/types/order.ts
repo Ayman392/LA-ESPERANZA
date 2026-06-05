@@ -32,10 +32,12 @@ export type CheckoutFormErrors = Partial<Record<keyof CheckoutFormValues, string
 
 export type OrderItem = {
   productId: string;
+  productVariantId?: string;
   slug: string;
   name: string;
   inspiredBy: string;
   size: CartProductSize;
+  sizeMl: 15 | 30;
   quantity: number;
   unitPrice: number;
   lineTotal: number;
