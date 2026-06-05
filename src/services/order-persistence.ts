@@ -62,8 +62,23 @@ type PaymentRecord = {
   rejection_reason: string | null;
 };
 
+type ProductStockRecord = {
+  slug: string;
+  name: string;
+  stock_quantity: number | null;
+  stock: number | null;
+  is_active: boolean | null;
+};
+
 const toNumber = (value: number | string) =>
   typeof value === "number" ? value : Number(value);
+
+export class StockValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StockValidationError";
+  }
+}
 
 const createCustomer = async (
   supabase: SupabaseServerClient,
@@ -141,14 +156,92 @@ const normalizeOrderItemTotals = (item: OrderItem): OrderItem => {
   };
 };
 
+const getRequestedProductQuantities = (items: OrderItem[]) =>
+  items.reduce((quantities, item) => {
+    quantities.set(item.slug, (quantities.get(item.slug) ?? 0) + item.quantity);
+
+    return quantities;
+  }, new Map<string, number>());
+
+const validateProductStock = async (
+  supabase: SupabaseServerClient,
+  items: OrderItem[],
+) => {
+  if (items.some((item) => !Number.isFinite(item.quantity) || item.quantity <= 0)) {
+    throw new StockValidationError("Cart item quantities must be greater than zero.");
+  }
+
+  const requestedQuantities = getRequestedProductQuantities(items);
+  const slugs = Array.from(requestedQuantities.keys());
+
+  if (slugs.length === 0) {
+    throw new StockValidationError("Cart items are required.");
+  }
+
+  const { data, error } = await supabase
+    .from("products")
+    .select("slug, name, stock_quantity, stock, is_active")
+    .in("slug", slugs)
+    .returns<ProductStockRecord[]>();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const stockBySlug = new Map((data ?? []).map((product) => [product.slug, product]));
+  const stockProblems = slugs.flatMap((slug) => {
+    const requestedQuantity = requestedQuantities.get(slug) ?? 0;
+    const product = stockBySlug.get(slug);
+
+    if (!product || product.is_active === false) {
+      return [`${slug} is no longer available.`];
+    }
+
+    const availableStock = product.stock_quantity ?? product.stock ?? 0;
+
+    if (requestedQuantity > availableStock) {
+      return [
+        `${product.name} has only ${availableStock} unit${
+          availableStock === 1 ? "" : "s"
+        } left. You requested ${requestedQuantity}.`,
+      ];
+    }
+
+    return [];
+  });
+
+  if (stockProblems.length > 0) {
+    throw new StockValidationError(stockProblems.join(" "));
+  }
+};
+
+const deductProductStock = async (
+  supabase: SupabaseServerClient,
+  items: OrderItem[],
+) => {
+  const requestedQuantities = getRequestedProductQuantities(items);
+
+  for (const [slug, quantity] of requestedQuantities) {
+    const { error } = await supabase.rpc("decrement_product_stock", {
+      p_product_slug: slug,
+      p_quantity: quantity,
+    });
+
+    if (error) {
+      throw new StockValidationError(error.message);
+    }
+  }
+};
+
 // This function must only run on the server because it uses the Supabase service role key.
 export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
   const supabase = createSupabaseServerClient();
-  const customer = await createCustomer(supabase, payload.customer);
   const orderNumber = generateOrderNumber();
   const normalizedItems = payload.items.map(normalizeOrderItemTotals);
   const orderStatus = getOrderStatusForPaymentMethod(payload.payment.method);
   const paymentStatus = getPaymentStatusForMethod(payload.payment.method);
+  await validateProductStock(supabase, normalizedItems);
+  const customer = await createCustomer(supabase, payload.customer);
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
@@ -207,6 +300,8 @@ export const createSupabaseOrder = async (payload: CreateOrderPayload) => {
   if (paymentError) {
     throw new Error(paymentError.message);
   }
+
+  await deductProductStock(supabase, normalizedItems);
 
   return mapSavedOrder(order, normalizedItems, {
     ...payload.payment,

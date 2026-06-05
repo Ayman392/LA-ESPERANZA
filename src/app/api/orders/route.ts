@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { createSupabaseOrder } from "@/services/order-persistence";
+import {
+  createSupabaseOrder,
+  StockValidationError,
+} from "@/services/order-persistence";
 import type { CreateOrderPayload } from "@/types/order";
 
 export async function POST(request: Request) {
@@ -19,6 +22,8 @@ export async function POST(request: Request) {
       order,
     });
   } catch (error) {
+    const isStockError = error instanceof StockValidationError;
+
     return NextResponse.json(
       {
         error:
@@ -26,7 +31,7 @@ export async function POST(request: Request) {
             ? error.message
             : "Unable to persist order in Supabase.",
       },
-      { status: 500 },
+      { status: isStockError ? 409 : 500 },
     );
   }
 }

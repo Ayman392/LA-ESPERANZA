@@ -54,7 +54,9 @@ type ProductRow = {
   gender: "Men" | "Women" | "Unisex";
   size_15ml_price: number | string;
   size_30ml_price: number | string;
-  stock: number;
+  stock: number | null;
+  stock_quantity: number | null;
+  low_stock_threshold: number | null;
   image: string;
   is_active: boolean;
 };
@@ -112,7 +114,8 @@ const mapProduct = (product: ProductRow): AdminProduct => ({
   gender: product.gender,
   size15mlPrice: toNumber(product.size_15ml_price),
   size30mlPrice: toNumber(product.size_30ml_price),
-  stock: product.stock,
+  stock: product.stock_quantity ?? product.stock ?? 0,
+  lowStockThreshold: product.low_stock_threshold ?? 5,
   image: product.image,
   isActive: product.is_active,
 });
@@ -124,11 +127,21 @@ const productPayload = (product: AdminProductInput) => ({
   gender: product.gender,
   size_15ml_price: product.size15mlPrice,
   size_30ml_price: product.size30mlPrice,
-  stock: product.stock,
+  stock_quantity: Math.max(0, product.stock ?? 0),
+  stock: Math.max(0, product.stock ?? 0),
+  low_stock_threshold: Math.max(0, product.lowStockThreshold ?? 5),
   image: product.image,
   is_active: product.isActive,
   updated_at: new Date().toISOString(),
 });
+
+const getLowStockProductsCount = (products: AdminProduct[]) =>
+  products.filter(
+    (product) => product.stock > 0 && product.stock <= product.lowStockThreshold,
+  ).length;
+
+const getOutOfStockProductsCount = (products: AdminProduct[]) =>
+  products.filter((product) => product.stock <= 0).length;
 
 export const getAdminDashboardData = async () => {
   const supabase = createSupabaseServerClient();
@@ -151,7 +164,7 @@ export const getAdminDashboardData = async () => {
         .returns<CustomerRow[]>(),
       supabase
         .from("products")
-        .select("id, slug, name, inspired_by, gender, size_15ml_price, size_30ml_price, stock, image, is_active")
+        .select("id, slug, name, inspired_by, gender, size_15ml_price, size_30ml_price, stock, stock_quantity, low_stock_threshold, image, is_active")
         .order("name", { ascending: true })
         .returns<ProductRow[]>(),
     ]);
@@ -165,6 +178,7 @@ export const getAdminDashboardData = async () => {
   const payments = paymentsResult.data ?? [];
   const customers = customersResult.data ?? [];
   const products = productsResult.data ?? [];
+  const mappedProducts = products.map(mapProduct);
   const mappedOrders = orders.map((order) => mapOrder(order, payments));
   const pendingPayments = payments
     .map((payment) => mapPayment(payment, orders))
@@ -178,6 +192,8 @@ export const getAdminDashboardData = async () => {
     pendingOrders: mappedOrders.filter((order) => order.status === "pending")
       .length,
     pendingPaymentVerifications: pendingPayments.length,
+    lowStockProducts: getLowStockProductsCount(mappedProducts),
+    outOfStockProducts: getOutOfStockProductsCount(mappedProducts),
     recentOrders: mappedOrders.slice(0, 5),
   };
 
@@ -203,7 +219,7 @@ export const getAdminDashboardData = async () => {
     orders: mappedOrders,
     payments: pendingPayments,
     customers: mappedCustomers,
-    products: products.map(mapProduct),
+    products: mappedProducts,
   };
 };
 

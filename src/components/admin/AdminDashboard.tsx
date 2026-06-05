@@ -62,11 +62,17 @@ type AdminContextValue = {
   setEditingProductId: (productId: string | null) => void;
   updatingOrderIds: Set<string>;
   updatingPaymentIds: Set<string>;
+  updatingProductIds: Set<string>;
   updateOrderStatus: (orderId: string, status: AdminOrderStatus) => Promise<void>;
   updatePayment: (
     payment: AdminPayment,
     action: "verify" | "reject",
     rejectionReason?: string,
+  ) => Promise<void>;
+  updateInventoryStock: (
+    productId: string,
+    stock: number,
+    lowStockThreshold: number,
   ) => Promise<void>;
   refreshDashboard: () => Promise<void>;
   saveProduct: () => Promise<void>;
@@ -92,11 +98,19 @@ const emptyProduct: AdminProductInput = {
   size15mlPrice: 0,
   size30mlPrice: 0,
   stock: 0,
+  lowStockThreshold: 5,
   image: "/products/flame.png",
   isActive: true,
 };
 
-const metricIcons = [ShoppingBag, CreditCard, Package, Users];
+const metricIcons = [
+  ShoppingBag,
+  CreditCard,
+  Package,
+  Users,
+  AlertTriangle,
+  Package,
+];
 
 const inputClass =
   "h-11 rounded-card border border-border bg-background px-3 text-sm text-charcoal outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20";
@@ -131,6 +145,7 @@ const callAdminApi = async (path: string, init?: RequestInit) => {
 const calculateDashboardMetrics = (
   orders: AdminOrder[],
   payments: AdminPayment[],
+  products: AdminProduct[] = [],
 ): AdminDashboardSummary => ({
   totalOrders: orders.length,
   totalRevenue: orders
@@ -145,12 +160,20 @@ const calculateDashboardMetrics = (
       (!relatedOrder || relatedOrder.status === "payment_verification")
     );
   }).length,
+  lowStockProducts: products.filter(
+    (product) => product.stock > 0 && product.stock <= product.lowStockThreshold,
+  ).length,
+  outOfStockProducts: products.filter((product) => product.stock <= 0).length,
   recentOrders: orders.slice(0, 5),
 });
 
 const withDashboardMetrics = (currentData: AdminPayload): AdminPayload => ({
   ...currentData,
-  dashboard: calculateDashboardMetrics(currentData.orders, currentData.payments),
+  dashboard: calculateDashboardMetrics(
+    currentData.orders,
+    currentData.payments,
+    currentData.products,
+  ),
 });
 
 const updateOrderStatusLocally = (
@@ -202,6 +225,25 @@ const removePaymentLocally = (
   return withDashboardMetrics(nextData);
 };
 
+const updateProductInventoryLocally = (
+  currentData: AdminPayload,
+  productId: string,
+  stock: number,
+  lowStockThreshold: number,
+): AdminPayload => {
+  const products = currentData.products.map((product) =>
+    product.id === productId
+      ? {
+          ...product,
+          stock,
+          lowStockThreshold,
+        }
+      : product,
+  );
+
+  return withDashboardMetrics({ ...currentData, products });
+};
+
 function useAdminDashboard() {
   const context = useContext(AdminDashboardContext);
 
@@ -235,6 +277,9 @@ export function AdminDashboardProvider({
     () => new Set(),
   );
   const [updatingPaymentIds, setUpdatingPaymentIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [updatingProductIds, setUpdatingProductIds] = useState<Set<string>>(
     () => new Set(),
   );
   const hasLoadedDashboard = useRef(false);
@@ -321,12 +366,16 @@ export function AdminDashboardProvider({
   }, [data?.orders, search, statusFilter]);
 
   const lowStockProducts = useMemo(
-    () => (data?.products ?? []).filter((product) => product.stock <= 5),
+    () =>
+      (data?.products ?? []).filter(
+        (product) =>
+          product.stock > 0 && product.stock <= product.lowStockThreshold,
+      ),
     [data?.products],
   );
 
   const dashboardMetrics = data
-    ? calculateDashboardMetrics(data.orders, data.payments)
+    ? calculateDashboardMetrics(data.orders, data.payments, data.products)
     : null;
 
   const metrics: Array<[string, string | number]> = dashboardMetrics
@@ -335,6 +384,8 @@ export function AdminDashboardProvider({
         ["Total Revenue", `BDT ${dashboardMetrics.totalRevenue}`],
         ["Pending Orders", dashboardMetrics.pendingOrders],
         ["Payment Checks", dashboardMetrics.pendingPaymentVerifications],
+        ["Low Stock Products", dashboardMetrics.lowStockProducts],
+        ["Out of Stock Products", dashboardMetrics.outOfStockProducts],
       ]
     : [];
 
@@ -463,6 +514,68 @@ export function AdminDashboardProvider({
     }
   };
 
+  const updateInventoryStock = async (
+    productId: string,
+    stock: number,
+    lowStockThreshold: number,
+  ) => {
+    const product = data?.products.find((entry) => entry.id === productId);
+    const safeStock = Math.max(0, Math.trunc(stock));
+    const safeThreshold = Math.max(0, Math.trunc(lowStockThreshold));
+
+    if (!data || !product || updatingProductIds.has(productId)) {
+      return;
+    }
+
+    setMessage("");
+    setUpdatingProductIds((current) => {
+      const next = new Set(current);
+      next.add(productId);
+      return next;
+    });
+    setData((current) =>
+      current
+        ? updateProductInventoryLocally(
+            current,
+            productId,
+            safeStock,
+            safeThreshold,
+          )
+        : current,
+    );
+
+    try {
+      await callAdminApi(`/api/admin/products/${productId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          ...product,
+          stock: safeStock,
+          lowStockThreshold: safeThreshold,
+        }),
+      });
+    } catch (error) {
+      setData((current) =>
+        current
+          ? updateProductInventoryLocally(
+              current,
+              productId,
+              product.stock,
+              product.lowStockThreshold,
+            )
+          : current,
+      );
+      setMessage(
+        error instanceof Error ? error.message : "Unable to update stock.",
+      );
+    } finally {
+      setUpdatingProductIds((current) => {
+        const next = new Set(current);
+        next.delete(productId);
+        return next;
+      });
+    }
+  };
+
   const refreshDashboard = async () => {
     setIsRefreshing(true);
 
@@ -531,8 +644,10 @@ export function AdminDashboardProvider({
         setEditingProductId,
         updatingOrderIds,
         updatingPaymentIds,
+        updatingProductIds,
         updateOrderStatus,
         updatePayment,
+        updateInventoryStock,
         refreshDashboard,
         saveProduct,
         deleteProduct,
@@ -678,6 +793,7 @@ export function AdminDashboardOverview() {
   const recentOrders = calculateDashboardMetrics(
     data.orders,
     data.payments,
+    data.products,
   ).recentOrders;
 
   return (
@@ -915,22 +1031,51 @@ export function AdminProductManagement() {
 }
 
 export function AdminInventoryPage() {
-  const { data, message, lowStockProducts } = useAdminDashboard();
+  const {
+    data,
+    message,
+    lowStockProducts,
+    updatingProductIds,
+    updateInventoryStock,
+  } = useAdminDashboard();
+  const outOfStockProducts = data.products.filter((product) => product.stock <= 0);
 
   return (
     <AdminPageShell eyebrow="Inventory" title="Stock inventory" message={message}>
       <section className="space-y-5">
-        {lowStockProducts.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-card border border-amber-200 bg-amber-50 p-5">
             <div className="flex items-center gap-3">
               <AlertTriangle aria-hidden className="h-5 w-5 text-amber-700" />
-              <p className="font-semibold text-amber-900">
-                {lowStockProducts.length} low stock warning
-              </p>
+              <div>
+                <p className="font-semibold text-amber-900">
+                  {lowStockProducts.length} low stock warning
+                </p>
+                <p className="mt-1 text-sm text-amber-800">
+                  Products at or below their threshold.
+                </p>
+              </div>
             </div>
           </div>
-        ) : null}
-        <ProductTable products={data.products} />
+          <div className="rounded-card border border-red-200 bg-red-50 p-5">
+            <div className="flex items-center gap-3">
+              <Package aria-hidden className="h-5 w-5 text-red-700" />
+              <div>
+                <p className="font-semibold text-red-900">
+                  {outOfStockProducts.length} out of stock
+                </p>
+                <p className="mt-1 text-sm text-red-800">
+                  Products with no sellable units left.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <InventoryTable
+          products={data.products}
+          updatingProductIds={updatingProductIds}
+          onUpdateStock={updateInventoryStock}
+        />
       </section>
     </AdminPageShell>
   );
@@ -1129,6 +1274,15 @@ function ProductEditor({
           onChange={(event) => update("stock", Number(event.target.value))}
           placeholder="Stock"
         />
+        <input
+          className={inputClass}
+          type="number"
+          value={product.lowStockThreshold}
+          onChange={(event) =>
+            update("lowStockThreshold", Number(event.target.value))
+          }
+          placeholder="Low stock threshold"
+        />
         <label className="flex items-center gap-2 text-sm font-semibold text-charcoal">
           <input
             type="checkbox"
@@ -1186,7 +1340,9 @@ function ProductTable({
           </div>
           <p className="text-sm text-muted">Stock {product.stock}</p>
           <p className="text-sm text-muted">
-            {product.stock <= 5
+            {product.stock <= 0
+              ? "Out of stock"
+              : product.stock <= product.lowStockThreshold
               ? "Low stock"
               : product.isActive
                 ? "Active"
@@ -1216,6 +1372,144 @@ function ProductTable({
           ) : null}
         </div>
       ))}
+    </div>
+  );
+}
+
+function InventoryTable({
+  products,
+  updatingProductIds,
+  onUpdateStock,
+}: {
+  products: AdminProduct[];
+  updatingProductIds: Set<string>;
+  onUpdateStock: (
+    productId: string,
+    stock: number,
+    lowStockThreshold: number,
+  ) => Promise<void>;
+}) {
+  const [drafts, setDrafts] = useState<
+    Record<string, { stock: string; lowStockThreshold: string }>
+  >({});
+
+  if (products.length === 0) {
+    return <EmptyState title="No products found" />;
+  }
+
+  const updateDraft = (
+    productId: string,
+    key: "stock" | "lowStockThreshold",
+    value: string,
+  ) => {
+    setDrafts((current) => ({
+      ...current,
+      [productId]: {
+        stock: current[productId]?.stock ?? "0",
+        lowStockThreshold: current[productId]?.lowStockThreshold ?? "5",
+        [key]: value,
+      },
+    }));
+  };
+
+  return (
+    <div className="overflow-hidden rounded-card border border-border bg-surface-strong shadow-soft">
+      {products.map((product) => {
+        const draft = drafts[product.id] ?? {
+          stock: String(product.stock),
+          lowStockThreshold: String(product.lowStockThreshold),
+        };
+        const draftStock = Number(draft.stock);
+        const draftThreshold = Number(draft.lowStockThreshold);
+        const isUpdating = updatingProductIds.has(product.id);
+        const isOutOfStock = product.stock <= 0;
+        const isLowStock =
+          product.stock > 0 && product.stock <= product.lowStockThreshold;
+
+        return (
+          <div
+            key={product.id}
+            className="grid gap-4 border-b border-border p-4 last:border-b-0 xl:grid-cols-[1.2fr_8rem_10rem_10rem_auto]"
+          >
+            <div>
+              <p className="font-semibold text-charcoal">{product.name}</p>
+              <p className="mt-1 text-sm text-muted">
+                {product.gender} | {product.inspiredBy}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase text-accent">
+                Current stock
+              </p>
+              <input
+                type="number"
+                min={0}
+                value={draft.stock}
+                disabled={isUpdating}
+                onChange={(event) =>
+                  updateDraft(product.id, "stock", event.target.value)
+                }
+                className={`${inputClass} mt-2 w-full disabled:cursor-not-allowed disabled:opacity-60`}
+              />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase text-accent">
+                Low threshold
+              </p>
+              <input
+                type="number"
+                min={0}
+                value={draft.lowStockThreshold}
+                disabled={isUpdating}
+                onChange={(event) =>
+                  updateDraft(product.id, "lowStockThreshold", event.target.value)
+                }
+                className={`${inputClass} mt-2 w-full disabled:cursor-not-allowed disabled:opacity-60`}
+              />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase text-accent">
+                Status
+              </p>
+              <p
+                className={`mt-3 text-sm font-semibold ${
+                  isOutOfStock
+                    ? "text-red-700"
+                    : isLowStock
+                      ? "text-amber-700"
+                      : product.isActive
+                        ? "text-charcoal"
+                        : "text-muted"
+                }`}
+              >
+                {isOutOfStock
+                  ? "Out of stock"
+                  : isLowStock
+                    ? "Low stock"
+                    : product.isActive
+                      ? "In stock"
+                      : "Hidden"}
+              </p>
+            </div>
+            <div className="flex items-end">
+              <button
+                type="button"
+                disabled={
+                  isUpdating ||
+                  !Number.isFinite(draftStock) ||
+                  !Number.isFinite(draftThreshold)
+                }
+                onClick={() =>
+                  void onUpdateStock(product.id, draftStock, draftThreshold)
+                }
+                className="h-10 rounded-full bg-charcoal px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isUpdating ? "Saving..." : "Update stock"}
+              </button>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

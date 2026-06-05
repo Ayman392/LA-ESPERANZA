@@ -68,6 +68,7 @@ export type AdminProduct = {
   size15mlPrice: number;
   size30mlPrice: number;
   stock: number;
+  lowStockThreshold: number;
   image: string;
   isActive: boolean;
 };
@@ -81,5 +82,7 @@ export type AdminDashboardSummary = {
   totalRevenue: number;
   pendingOrders: number;
   pendingPaymentVerifications: number;
+  lowStockProducts: number;
+  outOfStockProducts: number;
   recentOrders: AdminOrder[];
 };
