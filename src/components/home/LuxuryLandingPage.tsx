@@ -247,7 +247,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
             fill
             priority
             sizes="100vw"
-            className="object-cover object-[52%_center] brightness-[0.52] saturate-[0.72] md:object-center"
+            className="scale-[1.015] object-cover object-[52%_center] brightness-[0.38] saturate-[0.64] blur-[1.5px] md:object-center"
           />
         </motion.div>
 
@@ -273,9 +273,8 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
           </div>
         ) : null}
 
-        {/* Layer 3: spotlight, mist, and readable cinematic falloff. */}
+        {/* Layer 3: spotlight and mist shape the cinematic atmosphere. */}
         <div className="absolute inset-0 z-[2] bg-[radial-gradient(circle_at_50%_43%,rgba(230,199,138,0.18),rgba(7,10,15,0.2)_25%,rgba(5,7,11,0.76)_72%)]" />
-        <div className="absolute inset-x-0 bottom-0 z-[2] h-[48%] bg-[linear-gradient(0deg,rgba(5,7,11,0.96)_0%,rgba(5,7,11,0.56)_52%,transparent_100%)]" />
         <motion.div
           aria-hidden
           className="absolute inset-x-[10%] bottom-[8%] z-[3] h-44 rounded-full bg-white/8 blur-[70px]"
@@ -289,58 +288,12 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
           transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
         />
 
-        {/* Layer 4: oversized fragrance-house wordmark. */}
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-[28%] z-[4] flex justify-center px-3 text-center"
-          initial={shouldReduceMotion ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1.6, delay: 0.35, ease: "easeOut" }}
-        >
-          <p className="whitespace-nowrap font-serif text-[clamp(3rem,11vw,10.5rem)] font-semibold tracking-[0.08em] text-white/[0.13] [text-shadow:0_0_42px_rgba(230,199,138,0.14)]">
-            LA ESPERANZA
-          </p>
-        </motion.div>
-
-        {/* Layer 5: the masked foreground restores the bottle above the wordmark. */}
-        <motion.div
-          aria-hidden
-          className="hero-bottle-mask absolute inset-0 z-[5]"
-          initial={shouldReduceMotion ? false : { opacity: 0, scale: 1.05 }}
-          animate={
-            shouldReduceMotion
-              ? undefined
-              : {
-                  opacity: 1,
-                  scale: 1,
-                  x: parallax.x * 0.42,
-                  y: parallax.y * 0.32,
-                }
-          }
-          transition={{ duration: 1.55, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <motion.div
-            className="relative h-full w-full"
-            animate={shouldReduceMotion ? undefined : { y: [0, -5, 0] }}
-            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <Image
-              src="/hero/la-esperanza-bottle.png"
-              alt="Frosted LA ESPERANZA perfume bottle"
-              fill
-              priority
-              sizes="100vw"
-              className="object-cover object-[52%_center] md:object-center"
-            />
-          </motion.div>
-        </motion.div>
-
-        {/* Layer 6: minimal suspended fragrance droplets. */}
+        {/* Minimal suspended fragrance droplets stay inside the atmosphere. */}
         {droplets.map((droplet) => (
           <motion.span
             key={`${droplet.left}-${droplet.top}`}
             aria-hidden
-            className="absolute z-[6] rounded-full border border-white/42 bg-white/12 shadow-[0_0_18px_rgba(255,255,255,0.28)] backdrop-blur"
+            className="absolute z-[3] rounded-full border border-white/34 bg-white/10 shadow-[0_0_18px_rgba(255,255,255,0.22)] backdrop-blur"
             style={{
               left: droplet.left,
               top: droplet.top,
@@ -350,7 +303,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
             animate={
               shouldReduceMotion
                 ? undefined
-                : { y: [-6, 14, -6], opacity: [0.1, 0.48, 0.1] }
+                : { y: [-6, 14, -6], opacity: [0.08, 0.38, 0.08] }
             }
             transition={{
               duration: 7.2,
@@ -361,10 +314,71 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
           />
         ))}
 
-        {/* Layer 7: restrained editorial message and actions. */}
-        <Container className="relative z-[7] flex min-h-[100svh] items-end justify-center pb-9 pt-24 text-center sm:pb-12 md:pb-14">
+        {/* Layer 4: the split wordmark remains legible around the bottle. */}
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-[13%] z-[4] px-3 text-center md:top-[31%]"
+          initial={shouldReduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.6, delay: 0.35, ease: "easeOut" }}
+        >
+          <span className="block whitespace-nowrap font-serif text-[clamp(1.75rem,7.6vw,2.5rem)] font-semibold tracking-[0.05em] text-white/[0.4] [text-shadow:0_0_34px_rgba(230,199,138,0.34)] md:hidden">
+            LA ESPERANZA
+          </span>
+          <span className="hidden font-serif text-[clamp(4rem,5.2vw,6rem)] font-semibold tracking-[0.09em] text-white/[0.34] [text-shadow:0_0_36px_rgba(230,199,138,0.34)] md:block">
+            <span className="absolute left-[8%] top-0 whitespace-nowrap">
+              LA
+            </span>
+            <span className="absolute right-[2%] top-0 whitespace-nowrap">
+              ESPERANZA
+            </span>
+          </span>
+        </motion.div>
+
+        {/* Layer 5: a smaller, softer foreground bottle sits above the wordmark. */}
+        <div
+          aria-hidden
+          className="hero-bottle-mask absolute inset-0 z-[5] -translate-y-[3%] scale-[0.82] md:scale-[0.86]"
+        >
           <motion.div
-            className="max-w-2xl"
+            className="relative h-full w-full"
+            initial={shouldReduceMotion ? false : { opacity: 0, scale: 1.05 }}
+            animate={
+              shouldReduceMotion
+                ? undefined
+                : {
+                    opacity: 1,
+                    scale: 1,
+                    x: parallax.x * 0.42,
+                    y: parallax.y * 0.32,
+                  }
+            }
+            transition={{ duration: 1.55, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <motion.div
+              className="relative h-full w-full"
+              animate={shouldReduceMotion ? undefined : { y: [0, -5, 0] }}
+              transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Image
+                src="/hero/la-esperanza-bottle.png"
+                alt="Frosted LA ESPERANZA perfume bottle"
+                fill
+                priority
+                sizes="86vw"
+                className="object-cover object-[52%_center] brightness-[0.88] contrast-[0.96] blur-[0.45px] md:object-center"
+              />
+            </motion.div>
+          </motion.div>
+        </div>
+
+        {/* Layer 6: a dedicated lower falloff protects the editorial copy. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[6] h-[40%] bg-[linear-gradient(0deg,rgba(3,5,9,0.99)_0%,rgba(3,5,9,0.86)_38%,rgba(3,5,9,0.42)_68%,transparent_100%)]" />
+
+        {/* Layer 7: restrained editorial message and actions. */}
+        <Container className="relative z-[7] flex min-h-[100svh] items-end justify-center pb-5 pt-24 text-center sm:pb-7 md:pb-9">
+          <motion.div
+            className="max-w-4xl"
             initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{
@@ -373,11 +387,11 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
               ease: [0.22, 1, 0.36, 1],
             }}
           >
-            <h1 className="font-serif text-2xl font-semibold tracking-[0.025em] text-white [text-shadow:0_6px_26px_rgba(0,0,0,0.58)] sm:text-3xl md:text-4xl">
+            <h1 className="font-serif text-2xl font-semibold tracking-[0.025em] text-white [text-shadow:0_5px_22px_rgba(0,0,0,0.95),0_0_28px_rgba(201,169,106,0.12)] sm:text-3xl md:text-4xl">
               Timeless Scents. Endless Elegance.
             </h1>
             <motion.p
-              className="mx-auto mt-3 max-w-xl text-sm leading-6 text-white/66 [text-shadow:0_4px_18px_rgba(0,0,0,0.6)] sm:text-base"
+              className="mx-auto mt-3 max-w-xl text-sm leading-6 text-white/74 [text-shadow:0_4px_18px_rgba(0,0,0,0.9)] sm:text-base"
               initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 1, ease: "easeOut" }}

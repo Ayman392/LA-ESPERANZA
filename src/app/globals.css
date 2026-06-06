@@ -70,13 +70,13 @@ a {
 
 .hero-bottle-mask {
   -webkit-mask-image: radial-gradient(
-    ellipse 46% 48% at 50% 52%,
+    ellipse 46% 36% at 50% 52%,
     #000 48%,
     rgba(0, 0, 0, 0.92) 60%,
     transparent 78%
   );
   mask-image: radial-gradient(
-    ellipse 46% 48% at 50% 52%,
+    ellipse 46% 36% at 50% 52%,
     #000 48%,
     rgba(0, 0, 0, 0.92) 60%,
     transparent 78%
