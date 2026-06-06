@@ -18,6 +18,7 @@ type AnalyticsOrderRow = {
   customer_name: string;
   customer_phone: string;
   status: AdminOrderStatus;
+  subtotal: number | string | null;
   grand_total: number | string;
   created_at: string;
 };
@@ -27,7 +28,7 @@ type AnalyticsPaymentRow = {
   order_id: string;
   method: PaymentMethod;
   status: PaymentStatus;
-  amount: number | string;
+  amount: number | string | null;
   created_at: string;
   verified_at: string | null;
 };
@@ -108,20 +109,40 @@ const mapRecentOrder = (
   };
 };
 
-const getEligibleRevenuePayments = (
+const getEligibleRevenueOrders = (
   orders: AnalyticsOrderRow[],
   payments: AnalyticsPaymentRow[],
 ) => {
-  const deliveredOrderIds = new Set(
-    orders
-      .filter((order) => order.status === "delivered")
-      .map((order) => order.id),
+  const rejectedPaymentOrderIds = new Set(
+    payments
+      .filter((payment) => payment.status === "rejected")
+      .map((payment) => payment.order_id),
   );
 
-  return payments.filter(
-    (payment) =>
-      payment.status === "verified" && deliveredOrderIds.has(payment.order_id),
+  return orders.filter(
+    (order) =>
+      order.status === "delivered" && !rejectedPaymentOrderIds.has(order.id),
   );
+};
+
+const getOrderRevenue = (
+  order: AnalyticsOrderRow,
+  payment?: AnalyticsPaymentRow,
+) => {
+  const grandTotal = toNumber(order.grand_total);
+  const paymentAmount = toNumber(payment?.amount);
+  const subtotal = toNumber(order.subtotal);
+
+  // Delivered order total is the revenue source of truth; payment amount is only a fallback.
+  if (grandTotal > 0) {
+    return grandTotal;
+  }
+
+  if (payment?.status === "verified" && paymentAmount > 0) {
+    return paymentAmount;
+  }
+
+  return subtotal;
 };
 
 const aggregateBestSellers = (
@@ -218,7 +239,7 @@ const buildAnalytics = async (): Promise<AdminAnalytics> => {
   ] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, order_number, customer_name, customer_phone, status, grand_total, created_at")
+      .select("id, order_number, customer_name, customer_phone, status, subtotal, grand_total, created_at")
       .order("created_at", { ascending: false })
       .returns<AnalyticsOrderRow[]>(),
     supabase
@@ -252,19 +273,18 @@ const buildAnalytics = async (): Promise<AdminAnalytics> => {
   const today = startOfDay(now);
   const month = startOfMonth(now);
   const paymentByOrderId = new Map(payments.map((payment) => [payment.order_id, payment]));
-  const eligiblePayments = getEligibleRevenuePayments(orders, payments);
+  const eligibleRevenueOrders = getEligibleRevenueOrders(orders, payments);
   const validOrders = orders.filter((order) => order.status !== "cancelled");
   const trendByDate = new Map(
     createTrendWindow(now).map((entry) => [entry.date, entry]),
   );
 
-  eligiblePayments.forEach((payment) => {
-    const date = new Date(payment.verified_at ?? payment.created_at);
-    const dateKey = toDateKey(date);
+  eligibleRevenueOrders.forEach((order) => {
+    const dateKey = toDateKey(new Date(order.created_at));
     const trend = trendByDate.get(dateKey);
 
     if (trend) {
-      trend.revenue += toNumber(payment.amount);
+      trend.revenue += getOrderRevenue(order, paymentByOrderId.get(order.id));
     }
   });
 
@@ -278,6 +298,26 @@ const buildAnalytics = async (): Promise<AdminAnalytics> => {
   });
 
   const inventory = getInventoryAnalytics(variants, products);
+  const revenueDiagnostics = {
+    deliveredOrders: orders.filter((order) => order.status === "delivered").length,
+    rejectedPayments: payments.filter((payment) => payment.status === "rejected")
+      .length,
+    eligibleRevenueOrders: eligibleRevenueOrders.length,
+    verifiedPayments: payments.filter((payment) => payment.status === "verified")
+      .length,
+    zeroOrMissingPaymentAmounts: eligibleRevenueOrders.filter((order) => {
+      const payment = paymentByOrderId.get(order.id);
+
+      return !payment || toNumber(payment.amount) <= 0;
+    }).length,
+    totalGrandTotal: eligibleRevenueOrders.reduce(
+      (total, order) => total + toNumber(order.grand_total),
+      0,
+    ),
+  };
+
+  console.info("[analytics] revenue calculation", revenueDiagnostics);
+
   const recentPaymentActivity: AdminPaymentActivity[] = payments
     .slice()
     .sort(
@@ -299,20 +339,24 @@ const buildAnalytics = async (): Promise<AdminAnalytics> => {
 
   return {
     overview: {
-      totalRevenue: eligiblePayments.reduce(
-        (total, payment) => total + toNumber(payment.amount),
+      totalRevenue: eligibleRevenueOrders.reduce(
+        (total, order) => total + getOrderRevenue(order, paymentByOrderId.get(order.id)),
         0,
       ),
-      revenueToday: eligiblePayments
-        .filter((payment) =>
-          isOnOrAfter(payment.verified_at ?? payment.created_at, today),
-        )
-        .reduce((total, payment) => total + toNumber(payment.amount), 0),
-      revenueThisMonth: eligiblePayments
-        .filter((payment) =>
-          isOnOrAfter(payment.verified_at ?? payment.created_at, month),
-        )
-        .reduce((total, payment) => total + toNumber(payment.amount), 0),
+      revenueToday: eligibleRevenueOrders
+        .filter((order) => isOnOrAfter(order.created_at, today))
+        .reduce(
+          (total, order) =>
+            total + getOrderRevenue(order, paymentByOrderId.get(order.id)),
+          0,
+        ),
+      revenueThisMonth: eligibleRevenueOrders
+        .filter((order) => isOnOrAfter(order.created_at, month))
+        .reduce(
+          (total, order) =>
+            total + getOrderRevenue(order, paymentByOrderId.get(order.id)),
+          0,
+        ),
       totalOrders: validOrders.length,
       ordersToday: validOrders.filter((order) =>
         isOnOrAfter(order.created_at, today),
