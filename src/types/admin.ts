@@ -7,7 +7,8 @@ export type AdminSection =
   | "payments"
   | "customers"
   | "products"
-  | "inventory";
+  | "inventory"
+  | "analytics";
 
 export type AdminOrderStatus =
   | "pending"
@@ -110,4 +111,63 @@ export type AdminDashboardSummary = {
   lowStockProducts: number;
   outOfStockProducts: number;
   recentOrders: AdminOrder[];
+};
+
+export type AdminAnalyticsMetricCards = {
+  totalRevenue: number;
+  revenueToday: number;
+  revenueThisMonth: number;
+  totalOrders: number;
+  ordersToday: number;
+  ordersThisMonth: number;
+  pendingPayments: number;
+  lowStockProducts: number;
+  outOfStockProducts: number;
+};
+
+export type AdminTrendPoint = {
+  date: string;
+  revenue: number;
+  orders: number;
+};
+
+export type AdminBestSeller = {
+  productName: string;
+  productSlug: string;
+  quantity: number;
+  revenue: number;
+};
+
+export type AdminBestSellingSize = {
+  sizeLabel: "15ml" | "30ml";
+  quantity: number;
+  revenue: number;
+};
+
+export type AdminPaymentActivity = {
+  id: string;
+  orderNumber: string;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  amount: number;
+  updatedAt: string;
+};
+
+export type AdminAnalytics = {
+  overview: AdminAnalyticsMetricCards;
+  bestSellers: {
+    bestSellingProduct?: AdminBestSeller;
+    bestSellingSize?: AdminBestSellingSize;
+    topProducts: AdminBestSeller[];
+  };
+  trends: AdminTrendPoint[];
+  inventory: {
+    totalInventoryUnits: number;
+    lowStockVariants: number;
+    outOfStockVariants: number;
+  };
+  recentActivity: {
+    orders: AdminOrder[];
+    payments: AdminPaymentActivity[];
+  };
 };

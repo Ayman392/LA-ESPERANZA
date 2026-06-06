@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getAdminAnalytics } from "@/services/analytics";
 import { createSupabaseServerClient } from "@/supabase/server";
 import type {
   AdminCustomer,
@@ -279,6 +280,7 @@ export const getAdminDashboardData = async () => {
     customersResult,
     productsResult,
     variantsResult,
+    analytics,
   ] = await Promise.all([
     supabase
       .from("orders")
@@ -305,6 +307,7 @@ export const getAdminDashboardData = async () => {
       .select("id, product_id, size_ml, price, stock_quantity, low_stock_threshold, updated_at")
       .order("size_ml", { ascending: true })
       .returns<ProductVariantRow[]>(),
+    getAdminAnalytics(),
   ]);
 
   if (ordersResult.error) throw new Error(ordersResult.error.message);
@@ -373,6 +376,7 @@ export const getAdminDashboardData = async () => {
     customers: mappedCustomers,
     products: mappedProducts,
     variants: mappedVariants,
+    analytics,
   };
 };
 

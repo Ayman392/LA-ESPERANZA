@@ -13,7 +13,19 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
   AlertTriangle,
+  BarChart3,
   CheckCircle2,
   CreditCard,
   ImageIcon,
@@ -29,6 +41,7 @@ import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
 import { AdminSidebarNav } from "@/components/admin/AdminSidebarNav";
 import { paymentMethodLabels, paymentStatusLabels } from "@/lib/orders";
 import type {
+  AdminAnalytics,
   AdminCustomer,
   AdminDashboardSummary,
   AdminOrder,
@@ -47,6 +60,7 @@ type AdminPayload = {
   customers: AdminCustomer[];
   products: AdminProduct[];
   variants: AdminProductVariant[];
+  analytics: AdminAnalytics;
 };
 
 type AdminContextValue = {
@@ -132,6 +146,14 @@ const inputClass =
   "h-11 rounded-card border border-border bg-background px-3 text-sm text-charcoal outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20";
 const allowedProductImageTypes = ["image/jpeg", "image/png", "image/webp"];
 const maxProductImageSize = 5 * 1024 * 1024;
+
+const formatCurrency = (value: number) => `BDT ${value.toLocaleString()}`;
+
+const formatDateTime = (value: string) =>
+  new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 
 class AdminApiError extends Error {
   status: number;
@@ -802,6 +824,8 @@ function AdminActiveSection() {
       return <AdminProductManagement />;
     case "inventory":
       return <AdminInventoryPage />;
+    case "analytics":
+      return <AdminAnalyticsPage />;
     case "dashboard":
     default:
       return <AdminDashboardOverview />;
@@ -1147,6 +1171,273 @@ export function AdminInventoryPage() {
         />
       </section>
     </AdminPageShell>
+  );
+}
+
+export function AdminAnalyticsPage() {
+  const { data, message } = useAdminDashboard();
+  const { analytics } = data;
+  const overviewCards: Array<[string, string | number, typeof BarChart3]> = [
+    ["Total Revenue", formatCurrency(analytics.overview.totalRevenue), BarChart3],
+    ["Revenue Today", formatCurrency(analytics.overview.revenueToday), BarChart3],
+    [
+      "Revenue This Month",
+      formatCurrency(analytics.overview.revenueThisMonth),
+      BarChart3,
+    ],
+    ["Total Orders", analytics.overview.totalOrders, ShoppingBag],
+    ["Orders Today", analytics.overview.ordersToday, ShoppingBag],
+    ["Orders This Month", analytics.overview.ordersThisMonth, ShoppingBag],
+    ["Pending Payments", analytics.overview.pendingPayments, CreditCard],
+    ["Low Stock Products", analytics.overview.lowStockProducts, AlertTriangle],
+    ["Out Of Stock Products", analytics.overview.outOfStockProducts, Package],
+  ];
+
+  return (
+    <AdminPageShell
+      eyebrow="Analytics"
+      title="Business analytics"
+      message={message}
+    >
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {overviewCards.map(([label, value, Icon]) => (
+          <article
+            key={label}
+            className="rounded-card border border-border bg-surface-strong p-5 shadow-soft"
+          >
+            <Icon aria-hidden className="h-5 w-5 text-accent" />
+            <p className="mt-4 text-sm text-muted">{label}</p>
+            <p className="mt-2 text-3xl font-semibold text-charcoal">
+              {value}
+            </p>
+          </article>
+        ))}
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-2">
+        <AnalyticsChartCard title="Revenue Trend" description="Last 30 days">
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={analytics.trends}>
+              <CartesianGrid stroke="#e4ddda" strokeDasharray="3 3" />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip
+                formatter={(value) => formatCurrency(Number(value))}
+                contentStyle={{
+                  borderRadius: 8,
+                  borderColor: "#ded7d2",
+                  color: "#2c2924",
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="#8f7356"
+                fill="#d8c5b2"
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard title="Orders Trend" description="Last 30 days">
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={analytics.trends}>
+              <CartesianGrid stroke="#e4ddda" strokeDasharray="3 3" />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: 8,
+                  borderColor: "#ded7d2",
+                  color: "#2c2924",
+                }}
+              />
+              <Bar dataKey="orders" fill="#2f2c27" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </AnalyticsChartCard>
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-card border border-border bg-surface-strong p-5 shadow-soft">
+          <p className="text-sm font-semibold uppercase text-accent">
+            Best sellers
+          </p>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <AnalyticsHighlight
+              label="Best Selling Product"
+              value={
+                analytics.bestSellers.bestSellingProduct?.productName ??
+                "No sales yet"
+              }
+              detail={`${analytics.bestSellers.bestSellingProduct?.quantity ?? 0} units`}
+            />
+            <AnalyticsHighlight
+              label="Best Selling Size"
+              value={
+                analytics.bestSellers.bestSellingSize?.sizeLabel ??
+                "No size sales yet"
+              }
+              detail={`${analytics.bestSellers.bestSellingSize?.quantity ?? 0} units`}
+            />
+          </div>
+          <div className="mt-5 space-y-3">
+            {analytics.bestSellers.topProducts.length > 0 ? (
+              analytics.bestSellers.topProducts.map((product, index) => (
+                <div
+                  key={product.productSlug}
+                  className="flex items-center justify-between gap-4 rounded-card border border-border bg-background p-4"
+                >
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-accent">
+                      #{index + 1}
+                    </p>
+                    <p className="mt-1 font-semibold text-charcoal">
+                      {product.productName}
+                    </p>
+                  </div>
+                  <div className="text-right text-sm text-muted">
+                    <p>{product.quantity} units</p>
+                    <p>{formatCurrency(product.revenue)}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <EmptyState title="No best seller data yet" />
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-card border border-border bg-surface-strong p-5 shadow-soft">
+          <p className="text-sm font-semibold uppercase text-accent">
+            Inventory analytics
+          </p>
+          <div className="mt-5 space-y-3">
+            <AnalyticsHighlight
+              label="Total Inventory Units"
+              value={analytics.inventory.totalInventoryUnits}
+              detail="Across active variants"
+            />
+            <AnalyticsHighlight
+              label="Low Stock Variants"
+              value={analytics.inventory.lowStockVariants}
+              detail="At or below threshold"
+            />
+            <AnalyticsHighlight
+              label="Out Of Stock Variants"
+              value={analytics.inventory.outOfStockVariants}
+              detail="No sellable units"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-2">
+        <AnalyticsActivityList title="Last 10 Orders">
+          {analytics.recentActivity.orders.map((order) => (
+            <div
+              key={order.id}
+              className="rounded-card border border-border bg-background p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-charcoal">
+                    {order.orderNumber}
+                  </p>
+                  <p className="mt-1 text-sm text-muted">
+                    {order.customerName} | {order.status}
+                  </p>
+                </div>
+                <p className="text-sm font-semibold text-charcoal">
+                  {formatCurrency(order.grandTotal)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </AnalyticsActivityList>
+
+        <AnalyticsActivityList title="Last 10 Payment Updates">
+          {analytics.recentActivity.payments.map((payment) => (
+            <div
+              key={payment.id}
+              className="rounded-card border border-border bg-background p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-charcoal">
+                    {payment.orderNumber}
+                  </p>
+                  <p className="mt-1 text-sm text-muted">
+                    {paymentMethodLabels[payment.method]} |{" "}
+                    {paymentStatusLabels[payment.status]}
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    {formatDateTime(payment.updatedAt)}
+                  </p>
+                </div>
+                <p className="text-sm font-semibold text-charcoal">
+                  {formatCurrency(payment.amount)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </AnalyticsActivityList>
+      </section>
+    </AdminPageShell>
+  );
+}
+
+function AnalyticsChartCard({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-card border border-border bg-surface-strong p-5 shadow-soft">
+      <div className="mb-4">
+        <p className="text-sm font-semibold uppercase text-accent">{title}</p>
+        <p className="mt-1 text-sm text-muted">{description}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function AnalyticsHighlight({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string | number;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-card border border-border bg-background p-4">
+      <p className="text-xs font-semibold uppercase text-accent">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-charcoal">{value}</p>
+      <p className="mt-1 text-sm text-muted">{detail}</p>
+    </div>
+  );
+}
+
+function AnalyticsActivityList({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-card border border-border bg-surface-strong p-5 shadow-soft">
+      <p className="text-sm font-semibold uppercase text-accent">{title}</p>
+      <div className="mt-5 space-y-3">{children}</div>
+    </div>
   );
 }
 
