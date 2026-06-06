@@ -13,14 +13,19 @@ import type { Product, ProductFilters as ProductFilterState } from "@/types/prod
 type ShopCatalogProps = {
   products: Product[];
   occasions: string[];
+  initialSearch?: string;
 };
 
 // Local catalog explorer keeps filtering client-side for a fast storefront feel.
-export function ShopCatalog({ products, occasions }: ShopCatalogProps) {
+export function ShopCatalog({
+  products,
+  occasions,
+  initialSearch = "",
+}: ShopCatalogProps) {
   const maxPrice = maxCatalogPrice(products);
   const minPrice = minCatalogPrice(products);
   const [filters, setFilters] = useState<ProductFilterState>({
-    search: "",
+    search: initialSearch,
     gender: "All",
     minPrice,
     maxPrice,

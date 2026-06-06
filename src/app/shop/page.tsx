@@ -13,7 +13,16 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function ShopPage() {
+type ShopPageProps = {
+  searchParams: Promise<{ search?: string | string[] }>;
+};
+
+export default async function ShopPage({ searchParams }: ShopPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const searchValue = resolvedSearchParams.search;
+  const initialSearch = Array.isArray(searchValue)
+    ? (searchValue[0] ?? "")
+    : (searchValue ?? "");
   const catalogProducts = await getCatalogProducts();
   const productOccasions = getProductOccasions(catalogProducts);
 
@@ -34,7 +43,12 @@ export default async function ShopPage() {
             stock context, price range filtering, and wishlist-ready browsing.
           </p>
         </div>
-        <ShopCatalog products={catalogProducts} occasions={productOccasions} />
+        <ShopCatalog
+          key={initialSearch}
+          products={catalogProducts}
+          occasions={productOccasions}
+          initialSearch={initialSearch}
+        />
       </Container>
       <Footer />
     </main>

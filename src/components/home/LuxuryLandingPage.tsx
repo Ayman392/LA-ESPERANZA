@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, ChevronDown, Droplets, Sparkles } from "lucide-react";
+import { ArrowRight, Droplets, Sparkles } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import type { Product } from "@/types/product";
 
@@ -175,7 +175,7 @@ function CampaignButton({
     <Link
       href={href}
       className={[
-        "inline-flex min-h-12 items-center justify-center rounded-full px-7 text-sm font-semibold",
+        "inline-flex min-h-11 items-center justify-center rounded-full px-5 text-xs font-semibold uppercase tracking-[0.08em]",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C9A96A]",
         isPrimary
           ? "btn-primary-luxury btn-campaign-gold"
@@ -223,12 +223,89 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
         onMouseMove={handleHeroPointerMove}
         onMouseLeave={() => setParallax({ x: 0, y: 0 })}
       >
-        <div className="absolute inset-0 bg-[#080909]" />
-        <div className="absolute inset-y-0 right-0 w-full bg-[radial-gradient(circle_at_64%_43%,rgba(230,199,138,0.24),transparent_25rem)] md:w-4/5" />
-
+        {/* Layer 1: dark textured campaign image. */}
+        <div className="absolute inset-0 bg-[#05070B]" />
         <motion.div
           aria-hidden
           className="absolute inset-0"
+          initial={shouldReduceMotion ? false : { opacity: 0, scale: 1.03 }}
+          animate={
+            shouldReduceMotion
+              ? undefined
+              : {
+                  opacity: 1,
+                  scale: 1,
+                  x: parallax.x * 0.18,
+                  y: parallax.y * 0.14,
+                }
+          }
+          transition={{ duration: 1.7, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <Image
+            src="/hero/la-esperanza-bottle.png"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-[52%_center] brightness-[0.52] saturate-[0.72] md:object-center"
+          />
+        </motion.div>
+
+        {/* Layer 2: low-opacity React Bits atmosphere. */}
+        {shouldReduceMotion === false ? (
+          <div
+            aria-hidden
+            className="absolute inset-0 z-[1] opacity-[0.2] mix-blend-screen"
+          >
+            <LiquidEther
+              colors={liquidEtherColors}
+              mouseForce={7}
+              cursorSize={82}
+              resolution={0.3}
+              iterationsPoisson={18}
+              iterationsViscous={18}
+              autoDemo
+              autoSpeed={0.2}
+              autoIntensity={0.85}
+              autoResumeDelay={1800}
+              autoRampDuration={1.4}
+            />
+          </div>
+        ) : null}
+
+        {/* Layer 3: spotlight, mist, and readable cinematic falloff. */}
+        <div className="absolute inset-0 z-[2] bg-[radial-gradient(circle_at_50%_43%,rgba(230,199,138,0.18),rgba(7,10,15,0.2)_25%,rgba(5,7,11,0.76)_72%)]" />
+        <div className="absolute inset-x-0 bottom-0 z-[2] h-[48%] bg-[linear-gradient(0deg,rgba(5,7,11,0.96)_0%,rgba(5,7,11,0.56)_52%,transparent_100%)]" />
+        <motion.div
+          aria-hidden
+          className="absolute inset-x-[10%] bottom-[8%] z-[3] h-44 rounded-full bg-white/8 blur-[70px]"
+          animate={shouldReduceMotion ? undefined : { x: ["-3%", "3%", "-3%"] }}
+          transition={{ duration: 13, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          aria-hidden
+          className="absolute inset-y-0 left-[18%] z-[3] w-2/3 bg-[linear-gradient(112deg,transparent_26%,rgba(230,199,138,0.1)_50%,transparent_70%)] blur-2xl"
+          animate={shouldReduceMotion ? undefined : { x: ["-10%", "10%", "-10%"] }}
+          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+        />
+
+        {/* Layer 4: oversized fragrance-house wordmark. */}
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-[28%] z-[4] flex justify-center px-3 text-center"
+          initial={shouldReduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.6, delay: 0.35, ease: "easeOut" }}
+        >
+          <p className="whitespace-nowrap font-serif text-[clamp(3rem,11vw,10.5rem)] font-semibold tracking-[0.08em] text-white/[0.13] [text-shadow:0_0_42px_rgba(230,199,138,0.14)]">
+            LA ESPERANZA
+          </p>
+        </motion.div>
+
+        {/* Layer 5: the masked foreground restores the bottle above the wordmark. */}
+        <motion.div
+          aria-hidden
+          className="hero-bottle-mask absolute inset-0 z-[5]"
           initial={shouldReduceMotion ? false : { opacity: 0, scale: 1.05 }}
           animate={
             shouldReduceMotion
@@ -236,73 +313,34 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
               : {
                   opacity: 1,
                   scale: 1,
-                  x: parallax.x * 0.55,
-                  y: parallax.y * 0.45,
+                  x: parallax.x * 0.42,
+                  y: parallax.y * 0.32,
                 }
           }
-          transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1.55, ease: [0.22, 1, 0.36, 1] }}
         >
-          <Image
-            src="/hero/la-esperanza-bottle.png"
-            alt="Frosted LA ESPERANZA perfume bottle in a dark luxury campaign setting"
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-[58%_center] md:object-center"
-          />
+          <motion.div
+            className="relative h-full w-full"
+            animate={shouldReduceMotion ? undefined : { y: [0, -5, 0] }}
+            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Image
+              src="/hero/la-esperanza-bottle.png"
+              alt="Frosted LA ESPERANZA perfume bottle"
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover object-[52%_center] md:object-center"
+            />
+          </motion.div>
         </motion.div>
 
-        {shouldReduceMotion === false ? (
-          <div
-            aria-hidden
-            className="absolute inset-0 z-[1] opacity-[0.12] mix-blend-screen"
-          >
-            <LiquidEther
-              colors={liquidEtherColors}
-              mouseForce={6}
-              cursorSize={72}
-              resolution={0.28}
-              iterationsPoisson={18}
-              iterationsViscous={18}
-              autoDemo
-              autoSpeed={0.18}
-              autoIntensity={0.75}
-              autoResumeDelay={1800}
-              autoRampDuration={1.4}
-            />
-          </div>
-        ) : null}
-
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,9,9,0.38)_0%,rgba(8,9,9,0.7)_52%,rgba(8,9,9,0.94)_100%)] md:hidden" />
-        <div className="absolute inset-0 hidden bg-[radial-gradient(circle_at_center,rgba(8,9,9,0.42)_0%,rgba(8,9,9,0.69)_45%,rgba(8,9,9,0.82)_100%)] md:block" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(0deg,rgba(8,9,9,0.72),transparent)]" />
-
-        <motion.div
-          aria-hidden
-          className="absolute right-[8%] top-[18%] h-[30rem] w-[30rem] rounded-full bg-[#E6C78A]/12 blur-[110px]"
-          animate={shouldReduceMotion ? undefined : { opacity: [0.28, 0.46, 0.28] }}
-          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-        />
-
-        <motion.div
-          aria-hidden
-          className="absolute inset-y-0 right-0 w-2/3 bg-[linear-gradient(116deg,transparent_22%,rgba(255,245,214,0.13)_48%,transparent_68%)] blur-2xl"
-          animate={shouldReduceMotion ? undefined : { x: ["18%", "-12%", "18%"] }}
-          transition={{ duration: 17, repeat: Infinity, ease: "easeInOut" }}
-        />
-
-        <motion.div
-          aria-hidden
-          className="absolute bottom-[5%] right-[7%] h-20 w-[54%] rounded-full bg-white/12 blur-3xl"
-          animate={shouldReduceMotion ? undefined : { x: ["-4%", "4%", "-4%"] }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        />
-
+        {/* Layer 6: minimal suspended fragrance droplets. */}
         {droplets.map((droplet) => (
           <motion.span
             key={`${droplet.left}-${droplet.top}`}
             aria-hidden
-            className="absolute rounded-full border border-white/60 bg-white/18 shadow-[0_0_24px_rgba(255,255,255,0.5)] backdrop-blur"
+            className="absolute z-[6] rounded-full border border-white/42 bg-white/12 shadow-[0_0_18px_rgba(255,255,255,0.28)] backdrop-blur"
             style={{
               left: droplet.left,
               top: droplet.top,
@@ -312,10 +350,10 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
             animate={
               shouldReduceMotion
                 ? undefined
-                : { y: [-8, 18, -8], opacity: [0.16, 0.68, 0.16] }
+                : { y: [-6, 14, -6], opacity: [0.1, 0.48, 0.1] }
             }
             transition={{
-              duration: 6.2,
+              duration: 7.2,
               repeat: Infinity,
               delay: droplet.delay,
               ease: "easeInOut",
@@ -323,52 +361,35 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
           />
         ))}
 
-        <Container className="relative z-10 flex min-h-[100svh] items-center justify-center pb-16 pt-28 text-center md:pb-20 md:pt-32">
-          <div className="max-w-4xl">
-            <motion.p
-              className="mb-6 text-xs font-semibold uppercase tracking-[0.38em] text-[#C9A96A]"
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
-              animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-            >
-              LA ESPERANZA
-            </motion.p>
-            <h1 className="font-[var(--font-campaign-serif)] text-[2rem] font-semibold leading-[0.98] text-white [text-shadow:0_8px_34px_rgba(0,0,0,0.48)] sm:text-6xl md:text-7xl md:leading-[0.92] lg:text-8xl">
-              {["Timeless Scents.", "Endless Elegance."].map((line, index) => (
-                <motion.span
-                  key={line}
-                  className="block"
-                  initial={
-                    shouldReduceMotion ? false : { opacity: 0, y: 42, filter: "blur(10px)" }
-                  }
-                  animate={
-                    shouldReduceMotion
-                      ? undefined
-                      : { opacity: 1, y: 0, filter: "blur(0px)" }
-                  }
-                  transition={{
-                    duration: 1.1,
-                    delay: 0.18 + index * 0.2,
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
-                >
-                  {line}
-                </motion.span>
-              ))}
+        {/* Layer 7: restrained editorial message and actions. */}
+        <Container className="relative z-[7] flex min-h-[100svh] items-end justify-center pb-9 pt-24 text-center sm:pb-12 md:pb-14">
+          <motion.div
+            className="max-w-2xl"
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: 0.95,
+              delay: 0.78,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          >
+            <h1 className="font-serif text-2xl font-semibold tracking-[0.025em] text-white [text-shadow:0_6px_26px_rgba(0,0,0,0.58)] sm:text-3xl md:text-4xl">
+              Timeless Scents. Endless Elegance.
             </h1>
             <motion.p
-              className="mx-auto mt-7 max-w-xl text-base leading-8 text-white/76 [text-shadow:0_4px_18px_rgba(0,0,0,0.48)] sm:text-lg"
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 22 }}
-              animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, delay: 0.72, ease: "easeOut" }}
+              className="mx-auto mt-3 max-w-xl text-sm leading-6 text-white/66 [text-shadow:0_4px_18px_rgba(0,0,0,0.6)] sm:text-base"
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 1, ease: "easeOut" }}
             >
-              A refined fragrance experience crafted for lasting impressions.
+              Inspired fragrances crafted for presence, memory and lasting
+              impression.
             </motion.p>
             <motion.div
-              className="mt-9 flex flex-col justify-center gap-3 sm:flex-row"
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 22 }}
-              animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, delay: 0.92, ease: "easeOut" }}
+              className="mt-5 flex flex-wrap justify-center gap-3"
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 1.18, ease: "easeOut" }}
             >
               <CampaignButton href="#signature-collection">
                 Explore Collection
@@ -377,17 +398,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
                 Shop Now
               </CampaignButton>
             </motion.div>
-          </div>
-
-          <motion.a
-            href="#art-of-inspiration"
-            aria-label="Scroll to The Art of Inspiration"
-            className="absolute bottom-7 left-1/2 hidden -translate-x-1/2 text-white/55 md:inline-flex"
-            animate={shouldReduceMotion ? undefined : { y: [0, 8, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <ChevronDown aria-hidden className="h-6 w-6" />
-          </motion.a>
+          </motion.div>
         </Container>
       </section>
 

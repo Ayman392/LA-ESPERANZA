@@ -1,7 +1,9 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Heart, Search, ShoppingBag } from "lucide-react";
+import { ProductSearchOverlay } from "@/components/search/ProductSearchOverlay";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
 
@@ -15,28 +17,42 @@ const Badge = ({ count }: { count: number }) => (
 );
 
 export function NavStoreBadges() {
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const closeSearch = useCallback(() => setIsSearchOpen(false), []);
   const { totalItems: cartItems, isReady: isCartReady } = useCart();
   const { totalItems: wishlistItems, isReady: isWishlistReady } = useWishlist();
 
   return (
-    <div className="flex items-center gap-1.5 sm:gap-2">
-      <Link href="/shop" aria-label="Search perfumes" className={iconButtonClass}>
-        <Search aria-hidden className="h-4 w-4" />
-      </Link>
-      <Link
-        href="/wishlist"
-        aria-label="Open wishlist"
-        className={iconButtonClass}
-      >
-        <Heart aria-hidden className="h-4 w-4" />
-        {isWishlistReady && wishlistItems > 0 ? (
-          <Badge count={wishlistItems} />
-        ) : null}
-      </Link>
-      <Link href="/cart" aria-label="Open cart" className={iconButtonClass}>
-        <ShoppingBag aria-hidden className="h-4 w-4" />
-        {isCartReady && cartItems > 0 ? <Badge count={cartItems} /> : null}
-      </Link>
-    </div>
+    <>
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <button
+          type="button"
+          aria-label="Search perfumes"
+          aria-expanded={isSearchOpen}
+          onClick={() => setIsSearchOpen(true)}
+          className={iconButtonClass}
+        >
+          <Search aria-hidden className="h-4 w-4" />
+        </button>
+        <Link
+          href="/wishlist"
+          aria-label="Open wishlist"
+          className={iconButtonClass}
+        >
+          <Heart aria-hidden className="h-4 w-4" />
+          {isWishlistReady && wishlistItems > 0 ? (
+            <Badge count={wishlistItems} />
+          ) : null}
+        </Link>
+        <Link href="/cart" aria-label="Open cart" className={iconButtonClass}>
+          <ShoppingBag aria-hidden className="h-4 w-4" />
+          {isCartReady && cartItems > 0 ? <Badge count={cartItems} /> : null}
+        </Link>
+      </div>
+      <ProductSearchOverlay
+        isOpen={isSearchOpen}
+        onClose={closeSearch}
+      />
+    </>
   );
 }

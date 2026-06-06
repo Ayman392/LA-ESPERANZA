@@ -68,6 +68,38 @@ a {
   text-wrap: balance;
 }
 
+.hero-bottle-mask {
+  -webkit-mask-image: radial-gradient(
+    ellipse 46% 48% at 50% 52%,
+    #000 48%,
+    rgba(0, 0, 0, 0.92) 60%,
+    transparent 78%
+  );
+  mask-image: radial-gradient(
+    ellipse 46% 48% at 50% 52%,
+    #000 48%,
+    rgba(0, 0, 0, 0.92) 60%,
+    transparent 78%
+  );
+}
+
+@media (min-width: 768px) {
+  .hero-bottle-mask {
+    -webkit-mask-image: radial-gradient(
+      ellipse 28% 54% at 50% 52%,
+      #000 50%,
+      rgba(0, 0, 0, 0.94) 64%,
+      transparent 82%
+    );
+    mask-image: radial-gradient(
+      ellipse 28% 54% at 50% 52%,
+      #000 50%,
+      rgba(0, 0, 0, 0.94) 64%,
+      transparent 82%
+    );
+  }
+}
+
 /* Shared customer button motion keeps interactions restrained and consistent. */
 .btn-primary-luxury {
   transform: translateY(0) scale(1);
