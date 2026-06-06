@@ -75,8 +75,27 @@ a {
     transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 380ms ease,
     filter 380ms ease,
-    background-color 380ms ease;
+    background-color 380ms ease,
+    opacity 380ms ease;
   will-change: transform;
+}
+
+.btn-campaign-gold {
+  border: 1px solid rgba(230, 199, 138, 0.72);
+  background: linear-gradient(135deg, #c9a96a 0%, #e6c78a 100%);
+  color: #111111;
+  box-shadow:
+    0 12px 32px rgba(201, 169, 106, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.btn-campaign-gold-muted {
+  border-color: rgba(201, 169, 106, 0.92);
+  opacity: 0.82;
+}
+
+.btn-campaign-gold-muted:hover {
+  opacity: 1;
 }
 
 .btn-primary-luxury:hover:not(:disabled) {

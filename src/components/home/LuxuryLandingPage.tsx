@@ -170,7 +170,7 @@ function CampaignButton({
         "inline-flex min-h-12 items-center justify-center rounded-full px-7 text-sm font-semibold",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C9A96A]",
         isPrimary
-          ? "btn-primary-luxury bg-[#C9A96A] text-[#111111] hover:bg-[#d8bc7e]"
+          ? "btn-primary-luxury btn-campaign-gold"
           : "btn-secondary-luxury border border-white/28 bg-white/6 text-white hover:bg-white/12",
       ].join(" ")}
     >
@@ -524,7 +524,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
           </div>
           <Link
             href="/shop"
-            className="btn-primary-luxury inline-flex w-fit items-center gap-3 rounded-full bg-[#111111] px-6 py-3 text-sm font-semibold text-white hover:bg-[#2A2A2A]"
+            className="btn-primary-luxury btn-campaign-gold btn-campaign-gold-muted inline-flex w-fit items-center gap-3 rounded-full px-6 py-3 text-sm font-semibold"
           >
             Shop the Collection
             <ArrowRight aria-hidden className="h-4 w-4" />
