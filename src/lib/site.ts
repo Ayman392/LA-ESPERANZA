@@ -3,19 +3,20 @@ import type { NavItem } from "@/types/site";
 // Central brand configuration keeps navigation and metadata aligned.
 export const siteConfig = {
   name: "LA ESPERANZA",
-  description: "A refined Next.js ecommerce foundation for a perfume brand.",
+  description: "Timeless Scents. Endless Elegance.",
   url: "https://la-esperanza.example",
 };
 
 export const navItems: NavItem[] = [
   { label: "Shop", href: "/shop" },
-  { label: "Best Sellers", href: "/#best-sellers" },
-  { label: "Finder", href: "/#fragrance-finder" },
+  { label: "Collections", href: "/#signature-collection" },
+  { label: "About", href: "/#art-of-inspiration" },
+  { label: "Contact", href: "/#contact" },
 ];
 
 export const footerLinks: NavItem[] = [
-  { label: "Home", href: "/" },
   { label: "Shop", href: "/shop" },
-  { label: "Best Sellers", href: "/#best-sellers" },
-  { label: "Finder", href: "/#fragrance-finder" },
+  { label: "Collections", href: "/#signature-collection" },
+  { label: "About", href: "/#art-of-inspiration" },
+  { label: "Contact", href: "/#contact" },
 ];
