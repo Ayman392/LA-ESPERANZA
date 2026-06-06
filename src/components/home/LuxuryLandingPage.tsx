@@ -1,12 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, ChevronDown, Droplets, Sparkles } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import type { Product } from "@/types/product";
+
+const LiquidEther = dynamic(
+  () => import("@/components/effects/LiquidEther"),
+  { ssr: false, loading: () => null },
+);
+
+const liquidEtherColors = ["#0F0F0F", "#C9A96A", "#E6C78A"];
 
 type CampaignProduct = {
   name: string;
@@ -171,7 +179,7 @@ function CampaignButton({
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C9A96A]",
         isPrimary
           ? "btn-primary-luxury btn-campaign-gold"
-          : "btn-secondary-luxury border border-white/28 bg-white/6 text-white hover:bg-white/12",
+          : "btn-primary-luxury btn-campaign-gold btn-campaign-gold-muted",
       ].join(" ")}
     >
       {children}
@@ -220,7 +228,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
 
         <motion.div
           aria-hidden
-          className="absolute inset-0 md:left-[22%]"
+          className="absolute inset-0"
           initial={shouldReduceMotion ? false : { opacity: 0, scale: 1.05 }}
           animate={
             shouldReduceMotion
@@ -244,8 +252,29 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
           />
         </motion.div>
 
+        {shouldReduceMotion === false ? (
+          <div
+            aria-hidden
+            className="absolute inset-0 z-[1] opacity-[0.12] mix-blend-screen"
+          >
+            <LiquidEther
+              colors={liquidEtherColors}
+              mouseForce={6}
+              cursorSize={72}
+              resolution={0.28}
+              iterationsPoisson={18}
+              iterationsViscous={18}
+              autoDemo
+              autoSpeed={0.18}
+              autoIntensity={0.75}
+              autoResumeDelay={1800}
+              autoRampDuration={1.4}
+            />
+          </div>
+        ) : null}
+
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,9,9,0.38)_0%,rgba(8,9,9,0.7)_52%,rgba(8,9,9,0.94)_100%)] md:hidden" />
-        <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(8,9,9,0.98)_0%,rgba(8,9,9,0.91)_34%,rgba(8,9,9,0.48)_58%,rgba(8,9,9,0.12)_100%)] md:block" />
+        <div className="absolute inset-0 hidden bg-[radial-gradient(circle_at_center,rgba(8,9,9,0.42)_0%,rgba(8,9,9,0.69)_45%,rgba(8,9,9,0.82)_100%)] md:block" />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(0deg,rgba(8,9,9,0.72),transparent)]" />
 
         <motion.div
@@ -294,8 +323,8 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
           />
         ))}
 
-        <Container className="relative z-10 flex min-h-[100svh] items-center pb-16 pt-28 md:pb-20 md:pt-32">
-          <div className="max-w-2xl">
+        <Container className="relative z-10 flex min-h-[100svh] items-center justify-center pb-16 pt-28 text-center md:pb-20 md:pt-32">
+          <div className="max-w-4xl">
             <motion.p
               className="mb-6 text-xs font-semibold uppercase tracking-[0.38em] text-[#C9A96A]"
               initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
@@ -304,7 +333,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
             >
               LA ESPERANZA
             </motion.p>
-            <h1 className="font-[var(--font-campaign-serif)] text-5xl font-semibold leading-[0.92] text-white sm:text-6xl md:text-7xl lg:text-8xl">
+            <h1 className="font-[var(--font-campaign-serif)] text-[2rem] font-semibold leading-[0.98] text-white [text-shadow:0_8px_34px_rgba(0,0,0,0.48)] sm:text-6xl md:text-7xl md:leading-[0.92] lg:text-8xl">
               {["Timeless Scents.", "Endless Elegance."].map((line, index) => (
                 <motion.span
                   key={line}
@@ -328,7 +357,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
               ))}
             </h1>
             <motion.p
-              className="mt-7 max-w-xl text-base leading-8 text-white/72 sm:text-lg"
+              className="mx-auto mt-7 max-w-xl text-base leading-8 text-white/76 [text-shadow:0_4px_18px_rgba(0,0,0,0.48)] sm:text-lg"
               initial={shouldReduceMotion ? false : { opacity: 0, y: 22 }}
               animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.72, ease: "easeOut" }}
@@ -336,7 +365,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
               A refined fragrance experience crafted for lasting impressions.
             </motion.p>
             <motion.div
-              className="mt-9 flex flex-col gap-3 sm:flex-row"
+              className="mt-9 flex flex-col justify-center gap-3 sm:flex-row"
               initial={shouldReduceMotion ? false : { opacity: 0, y: 22 }}
               animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.92, ease: "easeOut" }}
