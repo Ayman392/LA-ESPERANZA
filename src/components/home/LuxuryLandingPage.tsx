@@ -212,7 +212,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
     <main className="overflow-hidden bg-[#FAF7F2] text-[#111111]">
       {/* Hero Section */}
       <section
-        className="relative min-h-[calc(100svh-5rem)] overflow-hidden bg-[#0F0F0F] text-white"
+        className="relative min-h-[100svh] overflow-hidden bg-[#0F0F0F] text-white"
         onMouseMove={handleHeroPointerMove}
         onMouseLeave={() => setParallax({ x: 0, y: 0 })}
       >
@@ -265,7 +265,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
           />
         ))}
 
-        <Container className="relative z-10 grid min-h-[calc(100svh-5rem)] items-center gap-12 py-16 md:grid-cols-[0.9fr_1.1fr] md:py-20">
+        <Container className="relative z-10 grid min-h-[100svh] items-center gap-12 pb-16 pt-28 md:grid-cols-[0.9fr_1.1fr] md:pb-20 md:pt-32">
           <div className="max-w-3xl">
             <motion.p
               className="mb-6 text-xs font-semibold uppercase tracking-[0.38em] text-[#C9A96A]"
