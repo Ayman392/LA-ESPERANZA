@@ -114,7 +114,7 @@ export function WishlistItemCard({ item, onRemove }: WishlistItemCardProps) {
                   )
                 : undefined
             }
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-charcoal px-4 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-primary-luxury inline-flex h-11 items-center justify-center gap-2 rounded-full bg-charcoal px-4 text-sm font-semibold text-white hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ShoppingBag aria-hidden className="h-4 w-4" />
             {isSelectedOutOfStock
@@ -125,7 +125,7 @@ export function WishlistItemCard({ item, onRemove }: WishlistItemCardProps) {
             type="button"
             onClick={onRemove}
             aria-label={`Remove ${item.product.name} from wishlist`}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background text-charcoal transition hover:border-accent/45 hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
+            className="btn-icon-luxury inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background text-charcoal hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
           >
             <Trash2 aria-hidden className="h-4 w-4" />
           </button>

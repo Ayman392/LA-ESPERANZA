@@ -167,11 +167,11 @@ function CampaignButton({
     <Link
       href={href}
       className={[
-        "inline-flex min-h-12 items-center justify-center rounded-full px-7 text-sm font-semibold transition duration-300",
+        "inline-flex min-h-12 items-center justify-center rounded-full px-7 text-sm font-semibold",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C9A96A]",
         isPrimary
-          ? "bg-[#C9A96A] text-[#111111] hover:bg-[#d8bc7e]"
-          : "border border-white/28 bg-white/6 text-white hover:border-white/50 hover:bg-white/12",
+          ? "btn-primary-luxury bg-[#C9A96A] text-[#111111] hover:bg-[#d8bc7e]"
+          : "btn-secondary-luxury border border-white/28 bg-white/6 text-white hover:bg-white/12",
       ].join(" ")}
     >
       {children}
@@ -453,7 +453,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
                       </p>
                       <Link
                         href={product.href}
-                        className="mt-8 inline-flex w-fit items-center gap-3 rounded-full border border-[#111111]/18 px-6 py-3 text-sm font-semibold text-[#111111] transition hover:border-[#C9A96A] hover:text-[#8E6F35]"
+                        className="btn-secondary-luxury mt-8 inline-flex w-fit items-center gap-3 rounded-full border border-[#111111]/18 px-6 py-3 text-sm font-semibold text-[#111111] hover:text-[#8E6F35]"
                       >
                         Discover
                         <ArrowRight aria-hidden className="h-4 w-4" />
@@ -524,7 +524,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
           </div>
           <Link
             href="/shop"
-            className="inline-flex w-fit items-center gap-3 rounded-full bg-[#111111] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#2A2A2A]"
+            className="btn-primary-luxury inline-flex w-fit items-center gap-3 rounded-full bg-[#111111] px-6 py-3 text-sm font-semibold text-white hover:bg-[#2A2A2A]"
           >
             Shop the Collection
             <ArrowRight aria-hidden className="h-4 w-4" />

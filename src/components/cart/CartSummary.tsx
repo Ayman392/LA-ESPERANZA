@@ -30,20 +30,20 @@ export function CartSummary({
       <div className="mt-6 grid gap-3">
         <Link
           href="/checkout"
-          className="inline-flex h-11 items-center justify-center rounded-full bg-charcoal px-5 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40"
+          className="btn-primary-luxury inline-flex h-11 items-center justify-center rounded-full bg-charcoal px-5 text-sm font-semibold text-white hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40"
         >
           Checkout
         </Link>
         <Link
           href="/shop"
-          className="inline-flex h-11 items-center justify-center rounded-full border border-border bg-background px-5 text-sm font-semibold text-charcoal transition hover:border-accent/45 hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
+          className="btn-secondary-luxury inline-flex h-11 items-center justify-center rounded-full border border-border bg-background px-5 text-sm font-semibold text-charcoal hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
         >
           Continue shopping
         </Link>
         <button
           type="button"
           onClick={onClearCart}
-          className="inline-flex h-11 items-center justify-center rounded-full border border-border bg-background px-5 text-sm font-semibold text-charcoal transition hover:border-accent/45 hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
+          className="btn-secondary-luxury inline-flex h-11 items-center justify-center rounded-full border border-border bg-background px-5 text-sm font-semibold text-charcoal hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
         >
           Clear cart
         </button>

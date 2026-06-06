@@ -10,8 +10,10 @@ type ButtonProps = {
 };
 
 const variants = {
-  primary: "bg-charcoal text-white shadow-soft hover:bg-[#38352f]",
-  secondary: "border border-border bg-surface-strong text-charcoal hover:border-accent/45 hover:bg-white",
+  primary:
+    "btn-primary-luxury bg-charcoal text-white shadow-soft hover:bg-[#38352f]",
+  secondary:
+    "btn-secondary-luxury border border-border bg-surface-strong text-charcoal hover:bg-white",
 };
 
 const sizes = {
@@ -28,7 +30,7 @@ export function Button({
   variant = "primary",
 }: ButtonProps) {
   const classes = clsx(
-    "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition focus:outline-none focus:ring-2 focus:ring-accent/40 focus:ring-offset-2 focus:ring-offset-background",
+    "inline-flex items-center justify-center gap-2 rounded-full font-semibold focus:outline-none focus:ring-2 focus:ring-accent/40 focus:ring-offset-2 focus:ring-offset-background",
     variants[variant],
     sizes[size],
     className,

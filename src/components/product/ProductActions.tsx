@@ -83,7 +83,7 @@ export function ProductActions({
                   )
                 : undefined
             }
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-charcoal px-4 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-primary-luxury inline-flex h-11 items-center justify-center gap-2 rounded-full bg-charcoal px-4 text-sm font-semibold text-white hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ShoppingBag aria-hidden className="h-4 w-4" />
             {isSelectedOutOfStock
@@ -98,7 +98,7 @@ export function ProductActions({
                 ? `Remove ${product.name} from wishlist`
                 : `Add ${product.name} to wishlist`
             }
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background text-charcoal transition hover:border-accent/45 hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
+            className="btn-icon-luxury inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background text-charcoal hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
           >
             <Heart
               aria-hidden
@@ -178,7 +178,7 @@ export function ProductActions({
                 )
               : undefined
           }
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-charcoal px-6 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-primary-luxury inline-flex h-12 items-center justify-center gap-2 rounded-full bg-charcoal px-6 text-sm font-semibold text-white hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ShoppingBag aria-hidden className="h-4 w-4" />
           {isSelectedOutOfStock ? "Out of Stock" : "Add to cart"}
@@ -186,7 +186,7 @@ export function ProductActions({
         <button
           type="button"
           onClick={() => toggleItem(product.id)}
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-border bg-background px-6 text-sm font-semibold text-charcoal transition hover:border-accent/45 hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
+          className="btn-secondary-luxury inline-flex h-12 items-center justify-center gap-2 rounded-full border border-border bg-background px-6 text-sm font-semibold text-charcoal hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
         >
           <Heart
             aria-hidden

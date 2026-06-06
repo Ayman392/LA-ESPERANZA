@@ -26,7 +26,7 @@ export function WishlistPage() {
         </p>
         <Link
           href="/shop"
-          className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-charcoal px-5 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40"
+          className="btn-primary-luxury mt-6 inline-flex h-11 items-center justify-center rounded-full bg-charcoal px-5 text-sm font-semibold text-white hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40"
         >
           Browse perfumes
         </Link>

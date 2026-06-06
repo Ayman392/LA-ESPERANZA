@@ -65,7 +65,7 @@ export function CartItemCard({
             type="button"
             onClick={onRemove}
             aria-label={`Remove ${item.product.name} from cart`}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background text-charcoal transition hover:border-accent/45 hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
+            className="btn-icon-luxury inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background text-charcoal hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
           >
             <Trash2 aria-hidden className="h-4 w-4" />
           </button>
@@ -77,7 +77,7 @@ export function CartItemCard({
               type="button"
               onClick={onDecrease}
               aria-label={`Decrease ${item.product.name} quantity`}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-charcoal transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
+              className="btn-icon-luxury inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent text-charcoal hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
             >
               <Minus aria-hidden className="h-4 w-4" />
             </button>
@@ -94,7 +94,7 @@ export function CartItemCard({
               type="button"
               onClick={onIncrease}
               aria-label={`Increase ${item.product.name} quantity`}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-charcoal transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
+              className="btn-icon-luxury inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent text-charcoal hover:bg-white focus:outline-none focus:ring-2 focus:ring-accent/40"
             >
               <Plus aria-hidden className="h-4 w-4" />
             </button>
