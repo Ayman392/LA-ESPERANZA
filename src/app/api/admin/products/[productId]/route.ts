@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertAdminAccess } from "@/lib/admin-session";
+import {
+  assertAdminAccess,
+  getAdminAccessErrorStatus,
+} from "@/lib/admin-session";
 import {
   deleteAdminProduct,
   updateAdminProduct,
@@ -11,7 +14,7 @@ export async function PATCH(
   context: { params: Promise<{ productId: string }> },
 ) {
   try {
-    assertAdminAccess(request);
+    await assertAdminAccess();
     const { productId } = await context.params;
     const product = (await request.json()) as AdminProductInput;
 
@@ -24,7 +27,7 @@ export async function PATCH(
         error:
           error instanceof Error ? error.message : "Unable to update product.",
       },
-      { status: error instanceof Error && error.message.includes("Admin session") ? 401 : 500 },
+      { status: getAdminAccessErrorStatus(error) },
     );
   }
 }
@@ -34,7 +37,7 @@ export async function DELETE(
   context: { params: Promise<{ productId: string }> },
 ) {
   try {
-    assertAdminAccess(request);
+    await assertAdminAccess();
     const { productId } = await context.params;
 
     await deleteAdminProduct(productId);
@@ -46,7 +49,7 @@ export async function DELETE(
         error:
           error instanceof Error ? error.message : "Unable to delete product.",
       },
-      { status: error instanceof Error && error.message.includes("Admin session") ? 401 : 500 },
+      { status: getAdminAccessErrorStatus(error) },
     );
   }
 }

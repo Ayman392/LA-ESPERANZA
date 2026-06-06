@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertAdminAccess } from "@/lib/admin-session";
+import {
+  assertAdminAccess,
+  getAdminAccessErrorStatus,
+} from "@/lib/admin-session";
 import { updateAdminOrderStatus } from "@/services/admin-dashboard";
 import type { AdminOrderStatus } from "@/types/admin";
 
@@ -17,7 +20,7 @@ export async function PATCH(
   context: { params: Promise<{ orderId: string }> },
 ) {
   try {
-    assertAdminAccess(request);
+    await assertAdminAccess();
     const { orderId } = await context.params;
     const body = (await request.json()) as { status?: AdminOrderStatus };
 
@@ -34,7 +37,7 @@ export async function PATCH(
         error:
           error instanceof Error ? error.message : "Unable to update order.",
       },
-      { status: error instanceof Error && error.message.includes("Admin session") ? 401 : 500 },
+      { status: getAdminAccessErrorStatus(error) },
     );
   }
 }

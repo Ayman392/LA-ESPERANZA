@@ -1,9 +1,23 @@
 import { NextResponse } from "next/server";
-import { clearAdminSessionCookie } from "@/lib/admin-session";
+import { createSupabaseAuthServerClient } from "@/supabase/auth-server";
 
 export async function POST() {
-  const response = NextResponse.json({ ok: true });
-  clearAdminSessionCookie(response);
+  try {
+    const authClient = await createSupabaseAuthServerClient();
+    const { error } = await authClient.auth.signOut();
 
-  return response;
+    if (error) {
+      throw error;
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error ? error.message : "Unable to sign out.",
+      },
+      { status: 500 },
+    );
+  }
 }

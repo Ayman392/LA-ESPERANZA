@@ -7,6 +7,7 @@ import { LockKeyhole } from "lucide-react";
 
 export function AdminLogin() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,20 +23,21 @@ export function AdminLogin() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       });
       const data = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        throw new Error(data.error ?? "Invalid admin password.");
+        throw new Error(data.error ?? "Invalid admin email or password.");
       }
 
+      router.replace("/admin");
       router.refresh();
     } catch (loginError) {
       setError(
         loginError instanceof Error
           ? loginError.message
-          : "Invalid admin password.",
+          : "Invalid admin email or password.",
       );
     } finally {
       setIsSubmitting(false);
@@ -59,6 +61,18 @@ export function AdminLogin() {
       </h1>
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <label className="block text-sm font-semibold text-charcoal">
+          Admin email
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="mt-2 h-12 w-full rounded-card border border-border bg-background px-4 text-sm text-charcoal outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+            placeholder="admin@example.com"
+            autoComplete="username"
+            required
+          />
+        </label>
+        <label className="block text-sm font-semibold text-charcoal">
           Admin password
           <input
             type="password"
@@ -67,6 +81,7 @@ export function AdminLogin() {
             className="mt-2 h-12 w-full rounded-card border border-border bg-background px-4 text-sm text-charcoal outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
             placeholder="Enter admin password"
             autoComplete="current-password"
+            required
           />
         </label>
         {error ? (
@@ -79,7 +94,7 @@ export function AdminLogin() {
         ) : null}
         <button
           type="submit"
-          disabled={!password || isSubmitting}
+          disabled={!email || !password || isSubmitting}
           className="h-12 w-full rounded-full bg-charcoal px-6 text-sm font-semibold text-white transition hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSubmitting ? "Signing in..." : "Sign in"}

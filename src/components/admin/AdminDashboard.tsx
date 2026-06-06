@@ -366,7 +366,8 @@ export function AdminDashboardProvider({
         };
 
         if (!response.ok) {
-          if (response.status === 401) {
+          if (response.status === 401 || response.status === 403) {
+            router.replace("/admin/login");
             router.refresh();
           }
           throw new Error(payload.error ?? "Unable to load admin dashboard.");
@@ -478,6 +479,13 @@ export function AdminDashboardProvider({
         body: JSON.stringify({ status }),
       });
     } catch (error) {
+      if (
+        error instanceof AdminApiError &&
+        (error.status === 401 || error.status === 403)
+      ) {
+        router.replace("/admin/login");
+        router.refresh();
+      }
       setData((current) =>
         current
           ? updateOrderStatusLocally(current, orderId, previousStatus)
@@ -525,6 +533,13 @@ export function AdminDashboardProvider({
         body: JSON.stringify({ action, rejectionReason }),
       });
     } catch (error) {
+      if (
+        error instanceof AdminApiError &&
+        (error.status === 401 || error.status === 403)
+      ) {
+        router.replace("/admin/login");
+        router.refresh();
+      }
       setData((current) => {
         if (!current) {
           return current;
@@ -570,7 +585,11 @@ export function AdminDashboardProvider({
       setMessage(
         error instanceof Error ? error.message : "Admin action failed.",
       );
-      if (error instanceof AdminApiError && error.status === 401) {
+      if (
+        error instanceof AdminApiError &&
+        (error.status === 401 || error.status === 403)
+      ) {
+        router.replace("/admin/login");
         router.refresh();
       }
     }
@@ -615,6 +634,13 @@ export function AdminDashboardProvider({
         }),
       });
     } catch (error) {
+      if (
+        error instanceof AdminApiError &&
+        (error.status === 401 || error.status === 403)
+      ) {
+        router.replace("/admin/login");
+        router.refresh();
+      }
       setData((current) =>
         current
           ? updateVariantInventoryLocally(

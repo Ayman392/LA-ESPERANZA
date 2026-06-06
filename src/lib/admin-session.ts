@@ -1,94 +1,97 @@
 import "server-only";
 
-import { createHmac, timingSafeEqual } from "crypto";
-import { cookies } from "next/headers";
-import type { NextRequest, NextResponse } from "next/server";
+import type { User } from "@supabase/supabase-js";
+import { createSupabaseAuthServerClient } from "@/supabase/auth-server";
+import { isSupabaseConfigured } from "@/supabase/config";
+import { createSupabaseServerClient } from "@/supabase/server";
 
-export const ADMIN_SESSION_COOKIE = "la_esperanza_admin_session";
-const ADMIN_SESSION_MAX_AGE = 60 * 60 * 8;
-
-const getAdminSecret = () => process.env.ADMIN_ACCESS_KEY ?? "";
-
-const signSession = (expiresAt: number) =>
-  createHmac("sha256", getAdminSecret()).update(String(expiresAt)).digest("hex");
-
-const safeCompare = (first: string, second: string) => {
-  const firstBuffer = Buffer.from(first);
-  const secondBuffer = Buffer.from(second);
-
-  return (
-    firstBuffer.length === secondBuffer.length &&
-    timingSafeEqual(firstBuffer, secondBuffer)
-  );
+export type AdminUser = {
+  id: string;
+  email: string;
+  role: "admin";
 };
 
-export const validateAdminPassword = (password: string) => {
-  const configuredPassword = getAdminSecret();
+export class AdminAccessError extends Error {
+  status: 401 | 403;
 
-  if (!configuredPassword) {
-    throw new Error("ADMIN_ACCESS_KEY is not configured.");
+  constructor(message: string, status: 401 | 403) {
+    super(message);
+    this.name = "AdminAccessError";
+    this.status = status;
+  }
+}
+
+const getAdminRole = async (user: User) => {
+  const serviceClient = createSupabaseServerClient();
+  const { data, error } = await serviceClient
+    .from("admin_users")
+    .select("user_id, role")
+    .eq("user_id", user.id)
+    .eq("role", "admin")
+    .maybeSingle<{ user_id: string; role: "admin" }>();
+
+  if (error) {
+    throw new Error(`Unable to verify admin role: ${error.message}`);
   }
 
-  return safeCompare(password, configuredPassword);
-};
-
-export const createAdminSessionToken = () => {
-  const expiresAt = Date.now() + ADMIN_SESSION_MAX_AGE * 1000;
-
-  return `${expiresAt}.${signSession(expiresAt)}`;
-};
-
-export const isValidAdminSessionToken = (token?: string) => {
-  const configuredPassword = getAdminSecret();
-
-  if (!configuredPassword || !token) {
-    return false;
+  if (!data) {
+    return null;
   }
 
-  const [expiresAtValue, signature] = token.split(".");
-  const expiresAt = Number(expiresAtValue);
+  return {
+    id: user.id,
+    email: user.email ?? "",
+    role: data.role,
+  } satisfies AdminUser;
+};
 
-  if (!expiresAt || !signature || expiresAt < Date.now()) {
-    return false;
+// Supabase verifies the access token before the private role table is queried.
+export const getCurrentAdmin = async (): Promise<AdminUser | null> => {
+  if (!isSupabaseConfigured) {
+    return null;
   }
 
-  return safeCompare(signature, signSession(expiresAt));
-};
+  const authClient = await createSupabaseAuthServerClient();
+  const {
+    data: { user },
+    error,
+  } = await authClient.auth.getUser();
 
-export const hasAdminSession = async () => {
-  const cookieStore = await cookies();
-
-  return isValidAdminSessionToken(
-    cookieStore.get(ADMIN_SESSION_COOKIE)?.value,
-  );
-};
-
-export const setAdminSessionCookie = (response: NextResponse) => {
-  response.cookies.set(ADMIN_SESSION_COOKIE, createAdminSessionToken(), {
-    httpOnly: true,
-    maxAge: ADMIN_SESSION_MAX_AGE,
-    path: "/",
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-  });
-};
-
-export const clearAdminSessionCookie = (response: NextResponse) => {
-  response.cookies.set(ADMIN_SESSION_COOKIE, "", {
-    httpOnly: true,
-    maxAge: 0,
-    path: "/",
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-  });
-};
-
-export const assertAdminAccess = (request: NextRequest) => {
-  const isValid = isValidAdminSessionToken(
-    request.cookies.get(ADMIN_SESSION_COOKIE)?.value,
-  );
-
-  if (!isValid) {
-    throw new Error("Admin session is invalid or expired.");
+  if (error || !user) {
+    return null;
   }
+
+  return getAdminRole(user);
 };
+
+export const hasAdminSession = async () =>
+  Boolean(await getCurrentAdmin());
+
+export const assertAdminAccess = async () => {
+  const authClient = await createSupabaseAuthServerClient();
+  const {
+    data: { user },
+    error,
+  } = await authClient.auth.getUser();
+
+  if (error || !user) {
+    throw new AdminAccessError(
+      "Admin session is invalid or expired.",
+      401,
+    );
+  }
+
+  const admin = await getAdminRole(user);
+
+  if (!admin) {
+    throw new AdminAccessError(
+      "This account does not have admin access.",
+      403,
+    );
+  }
+
+  return admin;
+};
+
+export const getAdminAccessErrorStatus = (error: unknown) =>
+  error instanceof AdminAccessError ? error.status : 500;

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertAdminAccess } from "@/lib/admin-session";
+import {
+  assertAdminAccess,
+  getAdminAccessErrorStatus,
+} from "@/lib/admin-session";
 import { createSupabaseServerClient } from "@/supabase/server";
 
 const PRODUCT_IMAGES_BUCKET = "product-images";
@@ -37,7 +40,7 @@ const validateImageFile = (file: File) => {
 
 export async function POST(request: NextRequest) {
   try {
-    assertAdminAccess(request);
+    await assertAdminAccess();
     const formData = await request.formData();
     const file = formData.get("file");
     const oldImagePath = formData.get("oldImagePath");
@@ -85,10 +88,7 @@ export async function POST(request: NextRequest) {
           error instanceof Error ? error.message : "Unable to upload image.",
       },
       {
-        status:
-          error instanceof Error && error.message.includes("Admin session")
-            ? 401
-            : 500,
+        status: getAdminAccessErrorStatus(error),
       },
     );
   }
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    assertAdminAccess(request);
+    await assertAdminAccess();
     const { imagePath } = (await request.json()) as {
       imagePath?: string;
     };
@@ -122,10 +122,7 @@ export async function DELETE(request: NextRequest) {
           error instanceof Error ? error.message : "Unable to delete image.",
       },
       {
-        status:
-          error instanceof Error && error.message.includes("Admin session")
-            ? 401
-            : 500,
+        status: getAdminAccessErrorStatus(error),
       },
     );
   }

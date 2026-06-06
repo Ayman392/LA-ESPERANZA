@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { AdminWorkspace } from "@/components/admin/AdminDashboard";
-import { AdminLogin } from "@/components/admin/AdminLogin";
 import { hasAdminSession } from "@/lib/admin-session";
 
 export const metadata: Metadata = {
@@ -8,8 +8,14 @@ export const metadata: Metadata = {
   description: "Admin dashboard for LA ESPERANZA operations.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function Page() {
   const isLoggedIn = await hasAdminSession();
 
-  return isLoggedIn ? <AdminWorkspace /> : <AdminLogin />;
+  if (!isLoggedIn) {
+    redirect("/admin/login");
+  }
+
+  return <AdminWorkspace />;
 }

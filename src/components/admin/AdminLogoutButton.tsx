@@ -12,11 +12,16 @@ export function AdminLogoutButton() {
     setIsLoggingOut(true);
 
     try {
-      await fetch("/api/admin/logout", {
+      const response = await fetch("/api/admin/logout", {
         method: "POST",
         credentials: "same-origin",
       });
-      router.replace("/admin");
+
+      if (!response.ok) {
+        throw new Error("Unable to log out.");
+      }
+
+      router.replace("/admin/login");
       router.refresh();
     } finally {
       setIsLoggingOut(false);

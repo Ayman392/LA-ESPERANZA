@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertAdminAccess } from "@/lib/admin-session";
+import {
+  assertAdminAccess,
+  getAdminAccessErrorStatus,
+} from "@/lib/admin-session";
 import { getAdminDashboardData } from "@/services/admin-dashboard";
 
 export async function GET(request: NextRequest) {
   try {
-    assertAdminAccess(request);
+    await assertAdminAccess();
     const data = await getAdminDashboardData();
 
     return NextResponse.json(data);
@@ -14,7 +17,7 @@ export async function GET(request: NextRequest) {
         error:
           error instanceof Error ? error.message : "Unable to load dashboard.",
       },
-      { status: error instanceof Error && error.message.includes("Admin session") ? 401 : 500 },
+      { status: getAdminAccessErrorStatus(error) },
     );
   }
 }

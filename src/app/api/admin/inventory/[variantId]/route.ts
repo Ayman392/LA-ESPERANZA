@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertAdminAccess } from "@/lib/admin-session";
+import {
+  assertAdminAccess,
+  getAdminAccessErrorStatus,
+} from "@/lib/admin-session";
 import { updateAdminProductVariant } from "@/services/admin-dashboard";
 
 type InventoryUpdatePayload = {
@@ -12,7 +15,7 @@ export async function PATCH(
   context: { params: Promise<{ variantId: string }> },
 ) {
   try {
-    assertAdminAccess(request);
+    await assertAdminAccess();
     const { variantId } = await context.params;
     const payload = (await request.json()) as InventoryUpdatePayload;
 
@@ -30,10 +33,7 @@ export async function PATCH(
           error instanceof Error ? error.message : "Unable to update inventory.",
       },
       {
-        status:
-          error instanceof Error && error.message.includes("Admin session")
-            ? 401
-            : 500,
+        status: getAdminAccessErrorStatus(error),
       },
     );
   }
