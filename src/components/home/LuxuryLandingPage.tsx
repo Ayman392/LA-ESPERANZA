@@ -187,7 +187,6 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
     () => getSignatureProducts(products),
     [products],
   );
-  const heroProduct = signatureProducts[0] ?? fallbackCampaignProducts[0];
   const collageProducts = [
     signatureProducts[3] ?? fallbackCampaignProducts[3],
     signatureProducts[1] ?? fallbackCampaignProducts[1],
@@ -216,12 +215,42 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
         onMouseMove={handleHeroPointerMove}
         onMouseLeave={() => setParallax({ x: 0, y: 0 })}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_62%_30%,rgba(201,169,106,0.22),transparent_29rem)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(15,15,15,0.94)_0%,rgba(15,15,15,0.8)_39%,rgba(15,15,15,0.36)_100%)]" />
+        <div className="absolute inset-0 bg-[#080909]" />
+        <div className="absolute inset-y-0 right-0 w-full bg-[radial-gradient(circle_at_64%_43%,rgba(230,199,138,0.24),transparent_25rem)] md:w-4/5" />
 
         <motion.div
           aria-hidden
-          className="absolute left-1/2 top-10 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-[#C9A96A]/16 blur-[110px]"
+          className="absolute inset-0 md:left-[22%]"
+          initial={shouldReduceMotion ? false : { opacity: 0, scale: 1.05 }}
+          animate={
+            shouldReduceMotion
+              ? undefined
+              : {
+                  opacity: 1,
+                  scale: 1,
+                  x: parallax.x * 0.55,
+                  y: parallax.y * 0.45,
+                }
+          }
+          transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <Image
+            src="/hero/la-esperanza-bottle.png"
+            alt="Frosted LA ESPERANZA perfume bottle in a dark luxury campaign setting"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-[58%_center] md:object-center"
+          />
+        </motion.div>
+
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,9,9,0.38)_0%,rgba(8,9,9,0.7)_52%,rgba(8,9,9,0.94)_100%)] md:hidden" />
+        <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(8,9,9,0.98)_0%,rgba(8,9,9,0.91)_34%,rgba(8,9,9,0.48)_58%,rgba(8,9,9,0.12)_100%)] md:block" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(0deg,rgba(8,9,9,0.72),transparent)]" />
+
+        <motion.div
+          aria-hidden
+          className="absolute right-[8%] top-[18%] h-[30rem] w-[30rem] rounded-full bg-[#E6C78A]/12 blur-[110px]"
           animate={shouldReduceMotion ? undefined : { opacity: [0.28, 0.46, 0.28] }}
           transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
         />
@@ -235,7 +264,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
 
         <motion.div
           aria-hidden
-          className="absolute inset-x-0 bottom-0 h-72 bg-[linear-gradient(0deg,rgba(250,247,242,0.28)_0%,rgba(255,255,255,0.08)_42%,transparent_100%)] blur-xl"
+          className="absolute bottom-[5%] right-[7%] h-20 w-[54%] rounded-full bg-white/12 blur-3xl"
           animate={shouldReduceMotion ? undefined : { x: ["-4%", "4%", "-4%"] }}
           transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
         />
@@ -254,7 +283,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
             animate={
               shouldReduceMotion
                 ? undefined
-                : { y: [0, -22, 0], opacity: [0.18, 0.72, 0.18] }
+                : { y: [-8, 18, -8], opacity: [0.16, 0.68, 0.16] }
             }
             transition={{
               duration: 6.2,
@@ -265,8 +294,8 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
           />
         ))}
 
-        <Container className="relative z-10 grid min-h-[100svh] items-center gap-12 pb-16 pt-28 md:grid-cols-[0.9fr_1.1fr] md:pb-20 md:pt-32">
-          <div className="max-w-3xl">
+        <Container className="relative z-10 flex min-h-[100svh] items-center pb-16 pt-28 md:pb-20 md:pt-32">
+          <div className="max-w-2xl">
             <motion.p
               className="mb-6 text-xs font-semibold uppercase tracking-[0.38em] text-[#C9A96A]"
               initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
@@ -304,7 +333,7 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
               animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.72, ease: "easeOut" }}
             >
-              Inspired fragrances crafted to leave a lasting impression.
+              A refined fragrance experience crafted for lasting impressions.
             </motion.p>
             <motion.div
               className="mt-9 flex flex-col gap-3 sm:flex-row"
@@ -320,35 +349,6 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
               </CampaignButton>
             </motion.div>
           </div>
-
-          <motion.div
-            className="relative mx-auto hidden aspect-[4/5] w-full max-w-[32rem] md:block"
-            initial={shouldReduceMotion ? false : { opacity: 0, scale: 1.08 }}
-            animate={
-              shouldReduceMotion
-                ? undefined
-                : {
-                    opacity: 1,
-                    scale: 1,
-                    x: parallax.x,
-                    y: parallax.y,
-                  }
-            }
-            transition={{ duration: 1.35, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <div className="absolute inset-x-10 bottom-8 h-20 rounded-full bg-white/18 blur-2xl" />
-            <div className="relative h-full overflow-hidden rounded-lg border border-white/12 bg-white/6 shadow-[0_34px_110px_rgba(0,0,0,0.42)] backdrop-blur">
-              <Image
-                src={heroProduct.image}
-                alt="LA ESPERANZA luxury perfume campaign visual"
-                fill
-                priority
-                sizes="(min-width: 1024px) 42vw, 80vw"
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_54%,rgba(15,15,15,0.55)_100%)]" />
-            </div>
-          </motion.div>
 
           <motion.a
             href="#art-of-inspiration"
