@@ -9,13 +9,13 @@ export const siteConfig = {
 
 export const navItems: NavItem[] = [
   { label: "Shop", href: "/shop" },
-  { label: "Foundation", href: "/#brand-foundation" },
-  { label: "Structure", href: "/#structure" },
+  { label: "Best Sellers", href: "/#best-sellers" },
+  { label: "Finder", href: "/#fragrance-finder" },
 ];
 
 export const footerLinks: NavItem[] = [
   { label: "Home", href: "/" },
   { label: "Shop", href: "/shop" },
-  { label: "Foundation", href: "/#brand-foundation" },
-  { label: "Structure", href: "/#structure" },
+  { label: "Best Sellers", href: "/#best-sellers" },
+  { label: "Finder", href: "/#fragrance-finder" },
 ];
