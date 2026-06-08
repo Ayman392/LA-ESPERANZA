@@ -21,31 +21,34 @@ export class AdminAccessError extends Error {
   }
 }
 
-const getAdminRole = async (user: User) => {
+export const getAdminFromProfile = async (user: User) => {
   const serviceClient = createSupabaseServerClient();
   const { data, error } = await serviceClient
-    .from("admin_users")
-    .select("user_id, role")
-    .eq("user_id", user.id)
-    .eq("role", "admin")
-    .maybeSingle<{ user_id: string; role: "admin" }>();
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single<{ role: string | null }>();
 
   if (error) {
+    if (error.code === "PGRST116") {
+      return null;
+    }
+
     throw new Error(`Unable to verify admin role: ${error.message}`);
   }
 
-  if (!data) {
+  if (data.role !== "admin") {
     return null;
   }
 
   return {
     id: user.id,
     email: user.email ?? "",
-    role: data.role,
+    role: "admin",
   } satisfies AdminUser;
 };
 
-// Supabase verifies the access token before the private role table is queried.
+// Supabase verifies the access token before the private profile role is queried.
 export const getCurrentAdmin = async (): Promise<AdminUser | null> => {
   if (!isSupabaseConfigured) {
     return null;
@@ -61,7 +64,7 @@ export const getCurrentAdmin = async (): Promise<AdminUser | null> => {
     return null;
   }
 
-  return getAdminRole(user);
+  return getAdminFromProfile(user);
 };
 
 export const hasAdminSession = async () =>
@@ -81,7 +84,7 @@ export const assertAdminAccess = async () => {
     );
   }
 
-  const admin = await getAdminRole(user);
+  const admin = await getAdminFromProfile(user);
 
   if (!admin) {
     throw new AdminAccessError(

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
+import { getAdminFromProfile } from "@/lib/admin-session";
 import { createSupabaseAuthServerClient } from "@/supabase/auth-server";
-import { createSupabaseServerClient } from "@/supabase/server";
 
 export async function POST(request: Request) {
   try {
@@ -33,18 +33,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const serviceClient = createSupabaseServerClient();
-    const { data: admin, error: roleError } = await serviceClient
-      .from("admin_users")
-      .select("user_id")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle<{ user_id: string }>();
-
-    if (roleError) {
-      await authClient.auth.signOut();
-      throw new Error(`Unable to verify admin role: ${roleError.message}`);
-    }
+    const admin = await getAdminFromProfile(user);
 
     if (!admin) {
       await authClient.auth.signOut();
