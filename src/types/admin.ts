@@ -1,5 +1,6 @@
 import type { ProductGender } from "@/types/product";
 import type { OrderStatus, PaymentMethod, PaymentStatus } from "@/types/order";
+import type { ReviewModerationStatus } from "@/types/review";
 
 export type AdminSection =
   | "dashboard"
@@ -8,7 +9,8 @@ export type AdminSection =
   | "customers"
   | "products"
   | "inventory"
-  | "analytics";
+  | "analytics"
+  | "reviews";
 
 export type AdminOrderStatus =
   | "pending"
@@ -102,6 +104,27 @@ export type AdminProductInput = Omit<AdminProduct, "id" | "variants"> & {
   lowStockThreshold: number;
 };
 
+export type AdminReview = {
+  id: string;
+  productId: string;
+  productName: string;
+  customerName: string;
+  customerEmail?: string;
+  rating: number;
+  reviewText: string;
+  verifiedPurchase: boolean;
+  isApproved: boolean;
+  moderationStatus: ReviewModerationStatus;
+  createdAt: string;
+};
+
+export type AdminReviewStatistics = {
+  totalReviews: number;
+  averageRating: number;
+  pendingReviews: number;
+  approvedReviews: number;
+};
+
 export type AdminDashboardSummary = {
   totalOrders: number;
   totalRevenue: number;
@@ -170,4 +193,5 @@ export type AdminAnalytics = {
     orders: AdminOrder[];
     payments: AdminPaymentActivity[];
   };
+  reviewStatistics: AdminReviewStatistics;
 };

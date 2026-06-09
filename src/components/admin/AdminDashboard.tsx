@@ -29,6 +29,7 @@ import {
   CheckCircle2,
   CreditCard,
   ImageIcon,
+  MessageSquareText,
   Package,
   RefreshCw,
   Search,
@@ -39,6 +40,7 @@ import {
 } from "lucide-react";
 import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
 import { AdminSidebarNav } from "@/components/admin/AdminSidebarNav";
+import { ReviewStars } from "@/components/reviews/ReviewStars";
 import { paymentMethodLabels, paymentStatusLabels } from "@/lib/orders";
 import type {
   AdminAnalytics,
@@ -50,6 +52,7 @@ import type {
   AdminProduct,
   AdminProductInput,
   AdminProductVariant,
+  AdminReview,
   AdminSection,
 } from "@/types/admin";
 
@@ -61,6 +64,7 @@ type AdminPayload = {
   products: AdminProduct[];
   variants: AdminProductVariant[];
   analytics: AdminAnalytics;
+  reviews: AdminReview[];
 };
 
 type AdminContextValue = {
@@ -83,6 +87,7 @@ type AdminContextValue = {
   updatingOrderIds: Set<string>;
   updatingPaymentIds: Set<string>;
   updatingVariantIds: Set<string>;
+  updatingReviewIds: Set<string>;
   updateOrderStatus: (orderId: string, status: AdminOrderStatus) => Promise<void>;
   updatePayment: (
     payment: AdminPayment,
@@ -97,6 +102,10 @@ type AdminContextValue = {
   refreshDashboard: () => Promise<void>;
   saveProduct: () => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
+  moderateReview: (
+    review: AdminReview,
+    action: "approve" | "reject" | "delete",
+  ) => Promise<void>;
 };
 
 const AdminDashboardContext = createContext<AdminContextValue | null>(null);
@@ -301,6 +310,73 @@ const updateVariantInventoryLocally = (
   return withDashboardMetrics({ ...currentData, products, variants });
 };
 
+const updateReviewModerationLocally = (
+  currentData: AdminPayload,
+  review: AdminReview,
+  action: "approve" | "reject" | "delete",
+): AdminPayload => {
+  const currentStatistics = currentData.analytics.reviewStatistics;
+  const wasApproved = review.moderationStatus === "approved";
+  const wasPending = review.moderationStatus === "pending";
+  let totalReviews = currentStatistics.totalReviews;
+  let approvedReviews = currentStatistics.approvedReviews;
+  let pendingReviews = currentStatistics.pendingReviews;
+  let approvedRatingTotal =
+    currentStatistics.averageRating * currentStatistics.approvedReviews;
+
+  if (action === "delete") {
+    totalReviews = Math.max(0, totalReviews - 1);
+    pendingReviews = Math.max(0, pendingReviews - (wasPending ? 1 : 0));
+    approvedReviews = Math.max(0, approvedReviews - (wasApproved ? 1 : 0));
+    approvedRatingTotal = Math.max(
+      0,
+      approvedRatingTotal - (wasApproved ? review.rating : 0),
+    );
+  } else if (action === "approve" && !wasApproved) {
+    pendingReviews = Math.max(0, pendingReviews - (wasPending ? 1 : 0));
+    approvedReviews += 1;
+    approvedRatingTotal += review.rating;
+  } else if (action === "reject") {
+    pendingReviews = Math.max(0, pendingReviews - (wasPending ? 1 : 0));
+
+    if (wasApproved) {
+      approvedReviews = Math.max(0, approvedReviews - 1);
+      approvedRatingTotal = Math.max(0, approvedRatingTotal - review.rating);
+    }
+  }
+
+  const reviews =
+    action === "delete"
+      ? currentData.reviews.filter((entry) => entry.id !== review.id)
+      : currentData.reviews.map((entry) =>
+          entry.id === review.id
+            ? {
+                ...entry,
+                moderationStatus:
+                  action === "approve"
+                    ? ("approved" as const)
+                    : ("rejected" as const),
+                isApproved: action === "approve",
+              }
+            : entry,
+        );
+
+  return {
+    ...currentData,
+    reviews,
+    analytics: {
+      ...currentData.analytics,
+      reviewStatistics: {
+        totalReviews,
+        approvedReviews,
+        pendingReviews,
+        averageRating:
+          approvedReviews > 0 ? approvedRatingTotal / approvedReviews : 0,
+      },
+    },
+  };
+};
+
 const getAdminVariantBySize = (product: AdminProduct, sizeMl: 15 | 30) =>
   product.variants.find((variant) => variant.sizeMl === sizeMl);
 
@@ -340,6 +416,9 @@ export function AdminDashboardProvider({
     () => new Set(),
   );
   const [updatingVariantIds, setUpdatingVariantIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [updatingReviewIds, setUpdatingReviewIds] = useState<Set<string>>(
     () => new Set(),
   );
   const hasLoadedDashboard = useRef(false);
@@ -695,6 +774,71 @@ export function AdminDashboardProvider({
     );
   };
 
+  const moderateReview = async (
+    review: AdminReview,
+    action: "approve" | "reject" | "delete",
+  ) => {
+    if (!data || updatingReviewIds.has(review.id)) {
+      return;
+    }
+
+    const previousStatistics = data.analytics.reviewStatistics;
+    setMessage("");
+    setUpdatingReviewIds((current) => {
+      const next = new Set(current);
+      next.add(review.id);
+      return next;
+    });
+    setData((current) =>
+      current
+        ? updateReviewModerationLocally(current, review, action)
+        : current,
+    );
+
+    try {
+      await callAdminApi(`/api/admin/reviews/${review.id}`, {
+        method: action === "delete" ? "DELETE" : "PATCH",
+        body:
+          action === "delete"
+            ? undefined
+            : JSON.stringify({ action }),
+      });
+      void loadDashboard({ silent: true, showError: false });
+    } catch (error) {
+      setData((current) => {
+        if (!current) {
+          return current;
+        }
+
+        const withoutReview = current.reviews.filter(
+          (entry) => entry.id !== review.id,
+        );
+
+        return {
+          ...current,
+          reviews: [review, ...withoutReview].sort(
+            (first, second) =>
+              new Date(second.createdAt).getTime() -
+              new Date(first.createdAt).getTime(),
+          ),
+          analytics: {
+            ...current.analytics,
+            reviewStatistics: previousStatistics,
+          },
+        };
+      });
+      setMessage(
+        error instanceof Error ? error.message : "Unable to moderate review.",
+      );
+    } finally {
+      setUpdatingReviewIds((current) => {
+        const next = new Set(current);
+        next.delete(review.id);
+        return next;
+      });
+    }
+  };
+
   if (isLoading) {
     return <AdminWorkspaceSkeleton />;
   }
@@ -732,12 +876,14 @@ export function AdminDashboardProvider({
         updatingOrderIds,
         updatingPaymentIds,
         updatingVariantIds,
+        updatingReviewIds,
         updateOrderStatus,
         updatePayment,
         updateInventoryStock,
         refreshDashboard,
         saveProduct,
         deleteProduct,
+        moderateReview,
       }}
     >
       {children}
@@ -852,6 +998,8 @@ function AdminActiveSection() {
       return <AdminInventoryPage />;
     case "analytics":
       return <AdminAnalyticsPage />;
+    case "reviews":
+      return <AdminReviewsManagement />;
     case "dashboard":
     default:
       return <AdminDashboardOverview />;
@@ -1200,6 +1348,120 @@ export function AdminInventoryPage() {
   );
 }
 
+export function AdminReviewsManagement() {
+  const {
+    data,
+    message,
+    updatingReviewIds,
+    moderateReview,
+  } = useAdminDashboard();
+
+  return (
+    <AdminPageShell
+      eyebrow="Reviews"
+      title="Review moderation"
+      message={message}
+    >
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          ["Total Reviews", data.analytics.reviewStatistics.totalReviews],
+          [
+            "Average Rating",
+            data.analytics.reviewStatistics.averageRating.toFixed(1),
+          ],
+          ["Pending Reviews", data.analytics.reviewStatistics.pendingReviews],
+          ["Approved Reviews", data.analytics.reviewStatistics.approvedReviews],
+        ].map(([label, value]) => (
+          <article
+            key={label}
+            className="rounded-card border border-border bg-surface-strong p-5 shadow-soft"
+          >
+            <MessageSquareText aria-hidden className="h-5 w-5 text-accent" />
+            <p className="mt-4 text-sm text-muted">{label}</p>
+            <p className="mt-2 text-3xl font-semibold text-charcoal">
+              {value}
+            </p>
+          </article>
+        ))}
+      </div>
+
+      <section className="space-y-4">
+        {data.reviews.length > 0 ? (
+          data.reviews.map((review) => {
+            const isUpdating = updatingReviewIds.has(review.id);
+
+            return (
+              <article
+                key={review.id}
+                className="rounded-card border border-border bg-surface-strong p-5 shadow-soft"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-charcoal">
+                        {review.customerName}
+                      </p>
+                      {review.verifiedPurchase ? (
+                        <span className="rounded-full border border-[#C9A96A]/35 bg-[#C9A96A]/10 px-2.5 py-1 text-xs font-semibold text-[#725724]">
+                          Verified Purchase
+                        </span>
+                      ) : null}
+                      <span className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-semibold capitalize text-muted">
+                        {review.moderationStatus}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-muted">
+                      {review.productName}
+                      {review.customerEmail
+                        ? ` | ${review.customerEmail}`
+                        : ""}
+                    </p>
+                    <p className="mt-1 text-xs text-muted">
+                      {formatDateTime(review.createdAt)}
+                    </p>
+                  </div>
+                  <ReviewStars value={review.rating} size="sm" />
+                </div>
+                <p className="mt-4 whitespace-pre-line text-sm leading-7 text-muted">
+                  {review.reviewText}
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={isUpdating || review.moderationStatus === "approved"}
+                    onClick={() => void moderateReview(review, "approve")}
+                    className="rounded-full bg-charcoal px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#3d3933] disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isUpdating || review.moderationStatus === "rejected"}
+                    onClick={() => void moderateReview(review, "reject")}
+                    className="rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold text-charcoal transition hover:border-accent/45 disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isUpdating}
+                    onClick={() => void moderateReview(review, "delete")}
+                    className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    {isUpdating ? "Saving..." : "Delete"}
+                  </button>
+                </div>
+              </article>
+            );
+          })
+        ) : (
+          <EmptyState title="No reviews submitted yet" />
+        )}
+      </section>
+    </AdminPageShell>
+  );
+}
+
 export function AdminAnalyticsPage() {
   const { data, message } = useAdminDashboard();
   const { analytics } = data;
@@ -1238,6 +1500,34 @@ export function AdminAnalyticsPage() {
             </p>
           </article>
         ))}
+      </section>
+
+      <section className="rounded-card border border-border bg-surface-strong p-5 shadow-soft">
+        <p className="text-sm font-semibold uppercase text-accent">
+          Review Statistics
+        </p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <AnalyticsHighlight
+            label="Total Reviews"
+            value={analytics.reviewStatistics.totalReviews}
+            detail="All submitted reviews"
+          />
+          <AnalyticsHighlight
+            label="Average Rating"
+            value={analytics.reviewStatistics.averageRating.toFixed(1)}
+            detail="Approved reviews"
+          />
+          <AnalyticsHighlight
+            label="Pending Reviews"
+            value={analytics.reviewStatistics.pendingReviews}
+            detail="Awaiting moderation"
+          />
+          <AnalyticsHighlight
+            label="Approved Reviews"
+            value={analytics.reviewStatistics.approvedReviews}
+            detail="Visible on product pages"
+          />
+        </div>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">

@@ -5,6 +5,8 @@ import { Container } from "@/components/layout/container";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { ProductActions } from "@/components/product/ProductActions";
+import { ProductReviews } from "@/components/reviews/ProductReviews";
+import { ReviewStars } from "@/components/reviews/ReviewStars";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -14,6 +16,7 @@ import {
   sortProductVariants,
 } from "@/lib/products";
 import { getCatalogProductBySlug } from "@/services/catalog-products";
+import { getApprovedProductReviews } from "@/services/reviews";
 
 type ProductDetailPageProps = {
   params: Promise<{
@@ -61,6 +64,7 @@ export default async function ProductDetailPage({
   const variants = sortProductVariants(
     product.product_variants ?? getProductVariants(product),
   );
+  const reviewData = await getApprovedProductReviews(product.id);
 
   return (
     <main className="min-h-screen">
@@ -95,6 +99,23 @@ export default async function ProductDetailPage({
             <p className="mt-3 text-lg text-muted">
               Inspired by {product.inspiredBy}
             </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <ReviewStars
+                value={reviewData.summary.averageRating}
+                size="sm"
+                label={`${product.name} average rating`}
+              />
+              <p className="text-sm font-semibold text-charcoal">
+                {reviewData.summary.averageRating.toFixed(1)}
+              </p>
+              <p className="text-sm text-muted">
+                ({reviewData.summary.totalReviews}{" "}
+                {reviewData.summary.totalReviews === 1
+                  ? "Review"
+                  : "Reviews"}
+                )
+              </p>
+            </div>
             <p className="mt-6 max-w-2xl text-base leading-8 text-muted">
               {product.description}
             </p>
@@ -173,6 +194,7 @@ export default async function ProductDetailPage({
             </div>
           </div>
         </section>
+        <ProductReviews productId={product.id} initialReviews={reviewData} />
       </Container>
       <Footer />
     </main>

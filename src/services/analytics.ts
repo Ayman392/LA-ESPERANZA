@@ -2,6 +2,7 @@ import "server-only";
 
 import { unstable_cache } from "next/cache";
 import { createSupabaseServerClient } from "@/supabase/server";
+import { getAdminReviewStatistics } from "@/services/reviews";
 import type {
   AdminAnalytics,
   AdminBestSeller,
@@ -236,6 +237,7 @@ const buildAnalytics = async (): Promise<AdminAnalytics> => {
     orderItemsResult,
     variantsResult,
     productsResult,
+    reviewStatistics,
   ] = await Promise.all([
     supabase
       .from("orders")
@@ -256,6 +258,7 @@ const buildAnalytics = async (): Promise<AdminAnalytics> => {
       .select("product_id, stock_quantity, low_stock_threshold")
       .returns<AnalyticsVariantRow[]>(),
     supabase.from("products").select("id, is_active").returns<AnalyticsProductRow[]>(),
+    getAdminReviewStatistics(),
   ]);
 
   if (ordersResult.error) throw new Error(ordersResult.error.message);
@@ -377,6 +380,7 @@ const buildAnalytics = async (): Promise<AdminAnalytics> => {
       orders: orders.slice(0, 10).map((order) => mapRecentOrder(order, paymentByOrderId)),
       payments: recentPaymentActivity,
     },
+    reviewStatistics,
   };
 };
 

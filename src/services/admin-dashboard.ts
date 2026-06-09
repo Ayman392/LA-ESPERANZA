@@ -1,6 +1,10 @@
 import "server-only";
 
 import { getAdminAnalytics } from "@/services/analytics";
+import {
+  getAdminReviews,
+  getAdminReviewStatistics,
+} from "@/services/reviews";
 import { createSupabaseServerClient } from "@/supabase/server";
 import type {
   AdminCustomer,
@@ -281,6 +285,8 @@ export const getAdminDashboardData = async () => {
     productsResult,
     variantsResult,
     analytics,
+    reviews,
+    reviewStatistics,
   ] = await Promise.all([
     supabase
       .from("orders")
@@ -308,6 +314,8 @@ export const getAdminDashboardData = async () => {
       .order("size_ml", { ascending: true })
       .returns<ProductVariantRow[]>(),
     getAdminAnalytics(),
+    getAdminReviews(),
+    getAdminReviewStatistics(),
   ]);
 
   if (ordersResult.error) throw new Error(ordersResult.error.message);
@@ -376,7 +384,11 @@ export const getAdminDashboardData = async () => {
     customers: mappedCustomers,
     products: mappedProducts,
     variants: mappedVariants,
-    analytics,
+    analytics: {
+      ...analytics,
+      reviewStatistics,
+    },
+    reviews,
   };
 };
 

@@ -5,6 +5,7 @@ import {
   BarChart3,
   CreditCard,
   LayoutDashboard,
+  MessageSquareText,
   Package,
   ShoppingBag,
   Users,
@@ -20,6 +21,7 @@ const adminNavItems = [
   { id: "products", label: "Products", icon: Package },
   { id: "inventory", label: "Inventory", icon: AlertTriangle },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "reviews", label: "Reviews", icon: MessageSquareText },
 ] satisfies Array<{
   id: AdminSection;
   label: string;
