@@ -3,6 +3,7 @@ import { LuxuryLandingPage } from "@/components/home/LuxuryLandingPage";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { getCatalogProducts } from "@/services/catalog-products";
+import { getHomepageApprovedReviews } from "@/services/reviews";
 
 export const metadata: Metadata = {
   title: "LA ESPERANZA | Timeless Scents. Endless Elegance.",
@@ -13,12 +14,15 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const products = await getCatalogProducts();
+  const [products, reviews] = await Promise.all([
+    getCatalogProducts(),
+    getHomepageApprovedReviews(),
+  ]);
 
   return (
     <>
       <Navbar />
-      <LuxuryLandingPage products={products} />
+      <LuxuryLandingPage products={products} reviews={reviews} />
       <Footer />
     </>
   );

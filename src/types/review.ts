@@ -11,6 +11,18 @@ export type ProductReview = {
   createdAt: string;
 };
 
+export type HomepageReview = Pick<
+  ProductReview,
+  | "id"
+  | "customerName"
+  | "rating"
+  | "reviewText"
+  | "verifiedPurchase"
+  | "createdAt"
+> & {
+  productName?: string;
+};
+
 export type ReviewSummary = {
   averageRating: number;
   totalReviews: number;

@@ -7,6 +7,7 @@ import type {
 } from "@/types/admin";
 import type {
   CreateReviewInput,
+  HomepageReview,
   PaginatedReviews,
   ProductReview,
   ReviewModerationStatus,
@@ -34,12 +35,29 @@ type ReviewSummaryRow = {
   total_reviews: number | string | null;
 };
 
+type HomepageReviewRow = Pick<
+  ReviewRow,
+  | "id"
+  | "product_id"
+  | "customer_name"
+  | "rating"
+  | "review_text"
+  | "verified_purchase"
+  | "created_at"
+>;
+
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const defaultPageSize = 5;
 const missingReviewSchemaCodes = new Set(["PGRST202", "PGRST205"]);
 
 const isReviewSchemaUnavailable = (code?: string) =>
   Boolean(code && missingReviewSchemaCodes.has(code));
+
+const canReadServerReviews = () =>
+  Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+  );
 
 const toProductReview = (review: ReviewRow): ProductReview => ({
   id: review.id,
@@ -51,6 +69,111 @@ const toProductReview = (review: ReviewRow): ProductReview => ({
   verifiedPurchase: review.verified_purchase,
   createdAt: review.created_at,
 });
+
+const toHomepageReview = (review: HomepageReviewRow): HomepageReview => ({
+  id: review.id,
+  customerName: review.customer_name,
+  rating: Number(review.rating),
+  reviewText: review.review_text,
+  verifiedPurchase: review.verified_purchase,
+  createdAt: review.created_at,
+});
+
+const homepageReviewSelect =
+  "id, product_id, customer_name, rating, review_text, verified_purchase, created_at";
+
+const addHomepageProductNames = async (reviews: HomepageReviewRow[]) => {
+  const productIds = Array.from(
+    new Set(reviews.map((review) => review.product_id)),
+  );
+
+  if (productIds.length === 0) {
+    return reviews.map(toHomepageReview);
+  }
+
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, name")
+    .in("id", productIds)
+    .returns<Array<{ id: string; name: string }>>();
+
+  if (error) {
+    console.error("Unable to load homepage review product names:", error.message);
+    return reviews.map(toHomepageReview);
+  }
+
+  const productNames = new Map(
+    (data ?? []).map((product) => [product.id, product.name]),
+  );
+
+  return reviews.map((review) => ({
+    ...toHomepageReview(review),
+    productName: productNames.get(review.product_id),
+  }));
+};
+
+export const getHomepageApprovedReviews = async (
+  limit = 6,
+): Promise<HomepageReview[]> => {
+  if (!canReadServerReviews()) {
+    return [];
+  }
+
+  const safeLimit = Math.min(6, Math.max(3, Math.trunc(limit)));
+  const supabase = createSupabaseServerClient();
+  const approvedByStatus = await supabase
+    .from("reviews")
+    .select(homepageReviewSelect)
+    .eq("moderation_status", "approved")
+    .order("created_at", { ascending: false })
+    .limit(safeLimit)
+    .returns<HomepageReviewRow[]>();
+
+  if (!approvedByStatus.error) {
+    return addHomepageProductNames(approvedByStatus.data ?? []);
+  }
+
+  if (isReviewSchemaUnavailable(approvedByStatus.error.code)) {
+    return [];
+  }
+
+  const moderationColumnUnavailable =
+    approvedByStatus.error.code === "42703" ||
+    approvedByStatus.error.code === "PGRST204" ||
+    approvedByStatus.error.message.includes("moderation_status");
+
+  if (!moderationColumnUnavailable) {
+    console.error(
+      "Unable to load approved homepage reviews:",
+      approvedByStatus.error.message,
+    );
+    return [];
+  }
+
+  // Older review schemas used only is_approved; retain compatibility while migrating.
+  const approvedByBoolean = await supabase
+    .from("reviews")
+    .select(homepageReviewSelect)
+    .eq("is_approved", true)
+    .order("created_at", { ascending: false })
+    .limit(safeLimit)
+    .returns<HomepageReviewRow[]>();
+
+  if (approvedByBoolean.error) {
+    if (isReviewSchemaUnavailable(approvedByBoolean.error.code)) {
+      return [];
+    }
+
+    console.error(
+      "Unable to load legacy approved homepage reviews:",
+      approvedByBoolean.error.message,
+    );
+    return [];
+  }
+
+  return addHomepageProductNames(approvedByBoolean.data ?? []);
+};
 
 export const getProductReviewSummary = async (
   productId: string,

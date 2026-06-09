@@ -5,9 +5,11 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Droplets, Sparkles } from "lucide-react";
+import { ArrowRight, BadgeCheck, Droplets, Quote } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { ReviewStars } from "@/components/reviews/ReviewStars";
 import type { Product } from "@/types/product";
+import type { HomepageReview } from "@/types/review";
 
 const LiquidEther = dynamic(
   () => import("@/components/effects/LiquidEther"),
@@ -86,12 +88,6 @@ const droplets = [
   { left: "72%", top: "58%", size: 7, delay: 0.45 },
   { left: "88%", top: "34%", size: 5, delay: 0.85 },
   { left: "50%", top: "77%", size: 4, delay: 1.2 },
-];
-
-const testimonials = [
-  "Long lasting and elegant.",
-  "Feels far more expensive than its price.",
-  "My new daily signature scent.",
 ];
 
 const toCampaignProduct = (product: Product): CampaignProduct => ({
@@ -187,7 +183,13 @@ function CampaignButton({
   );
 }
 
-export function LuxuryLandingPage({ products }: { products: Product[] }) {
+export function LuxuryLandingPage({
+  products,
+  reviews,
+}: {
+  products: Product[];
+  reviews: HomepageReview[];
+}) {
   const shouldReduceMotion = useReducedMotion();
   const [parallax, setParallax] = useState({ x: 0, y: 0 });
 
@@ -541,34 +543,64 @@ export function LuxuryLandingPage({ products }: { products: Product[] }) {
         </Container>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-20 md:py-28">
-        <Container>
-          <Reveal className="mx-auto max-w-3xl text-center">
-            <SectionLabel>Testimonials</SectionLabel>
-            <h2 className="mt-5 font-[var(--font-campaign-serif)] text-4xl font-semibold leading-tight md:text-6xl">
-              Quiet impressions from daily wear.
-            </h2>
-          </Reveal>
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
-            {testimonials.map((testimonial, index) => (
-              <Reveal key={testimonial} delay={index * 0.06}>
-                <article className="h-full rounded-lg border border-[#E8E3D8] bg-white/70 p-7 shadow-[0_18px_60px_rgba(17,17,17,0.06)] backdrop-blur">
-                  <div className="mb-8 flex items-center gap-2 text-[#C9A96A]">
-                    <Sparkles aria-hidden className="h-4 w-4" />
-                    <span className="text-xs font-semibold uppercase tracking-[0.3em]">
-                      LA ESPERANZA
-                    </span>
-                  </div>
-                  <p className="font-[var(--font-campaign-serif)] text-2xl leading-snug text-[#111111]">
-                    &ldquo;{testimonial}&rdquo;
-                  </p>
-                </article>
-              </Reveal>
-            ))}
-          </div>
-        </Container>
-      </section>
+      {/* Approved customer reviews replace static campaign testimonials. */}
+      {reviews.length > 0 ? (
+        <section className="bg-[#FAF7F2] py-20 md:py-28">
+          <Container>
+            <Reveal className="mx-auto max-w-3xl text-center">
+              <SectionLabel>Customer Reviews</SectionLabel>
+              <h2 className="mt-5 font-[var(--font-campaign-serif)] text-4xl font-semibold leading-tight md:text-6xl">
+                Loved by Fragrance Lovers
+              </h2>
+              <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[#6F6F6F] md:text-lg">
+                Real impressions from customers who made LA ESPERANZA part of
+                their signature.
+              </p>
+            </Reveal>
+
+            <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {reviews.map((review, index) => (
+                <Reveal key={review.id} delay={index * 0.06}>
+                  <article className="flex h-full flex-col rounded-lg border border-[#E8E3D8] bg-white/80 p-7 shadow-[0_18px_60px_rgba(17,17,17,0.06)] backdrop-blur">
+                    <div className="flex items-start justify-between gap-4">
+                      <ReviewStars
+                        value={review.rating}
+                        size="sm"
+                        label={`${review.customerName} rating`}
+                      />
+                      <Quote
+                        aria-hidden
+                        className="h-5 w-5 text-[#C9A96A]/55"
+                      />
+                    </div>
+                    <p className="mt-6 flex-1 font-[var(--font-campaign-serif)] text-2xl leading-snug text-[#111111]">
+                      &ldquo;{review.reviewText}&rdquo;
+                    </p>
+                    <div className="mt-8 border-t border-[#E8E3D8] pt-5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold text-[#111111]">
+                          {review.customerName}
+                        </p>
+                        {review.verifiedPurchase ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#C9A96A]/35 bg-[#C9A96A]/10 px-2.5 py-1 text-[11px] font-semibold text-[#725724]">
+                            <BadgeCheck aria-hidden className="h-3.5 w-3.5" />
+                            Verified Purchase
+                          </span>
+                        ) : null}
+                      </div>
+                      {review.productName ? (
+                        <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#8E6F35]">
+                          {review.productName}
+                        </p>
+                      ) : null}
+                    </div>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </Container>
+        </section>
+      ) : null}
 
       <section className="border-y border-[#E8E3D8] bg-[#F8F7F4] py-10">
         <Container className="flex flex-col gap-5 text-sm text-[#6F6F6F] md:flex-row md:items-center md:justify-between">
