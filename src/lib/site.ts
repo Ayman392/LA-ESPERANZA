@@ -1,10 +1,14 @@
 import type { NavItem } from "@/types/site";
 
+const configuredSiteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "") ||
+  "https://laesperanza.com.bd";
+
 // Central brand configuration keeps navigation and metadata aligned.
 export const siteConfig = {
   name: "LA ESPERANZA",
   description: "Timeless Scents. Endless Elegance.",
-  url: "https://la-esperanza.example",
+  url: configuredSiteUrl,
 };
 
 export const navItems: NavItem[] = [

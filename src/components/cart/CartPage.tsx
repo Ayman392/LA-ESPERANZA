@@ -76,6 +76,7 @@ export function CartPage() {
         </div>
       </section>
       <CartSummary
+        lineItems={lineItems}
         subtotal={subtotal}
         totalItems={totalItems}
         onClearCart={clearCart}

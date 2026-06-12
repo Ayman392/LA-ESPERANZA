@@ -4,12 +4,15 @@ import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { ShopCatalog } from "@/components/product/shop-catalog";
 import { getProductOccasions } from "@/lib/products";
+import { createPageMetadata } from "@/lib/seo";
 import { getCatalogProducts } from "@/services/catalog-products";
 
-export const metadata: Metadata = {
-  title: "Shop | LA ESPERANZA",
-  description: "Browse the LA ESPERANZA inspired perfume catalog.",
-};
+export const metadata: Metadata = createPageMetadata({
+  title: "Shop Inspired Perfumes | LA ESPERANZA",
+  description:
+    "Explore premium inspired perfumes for men, women, and every signature style. Shop LA ESPERANZA fragrances across Bangladesh.",
+  path: "/shop",
+});
 
 export const dynamic = "force-dynamic";
 

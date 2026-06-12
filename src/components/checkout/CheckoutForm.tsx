@@ -17,6 +17,7 @@ import {
   persistOrder,
   validateCheckoutForm,
 } from "@/lib/orders";
+import { trackPurchase } from "@/lib/marketing";
 import type {
   CheckoutFormErrors,
   CheckoutFormValues,
@@ -91,6 +92,7 @@ export function CheckoutForm() {
         createOrderPayload(values, lineItems, subtotal),
       );
 
+      trackPurchase(order);
       clearCart();
       router.push(`/order-confirmation?order=${order.orderNumber}`);
     } catch (error) {

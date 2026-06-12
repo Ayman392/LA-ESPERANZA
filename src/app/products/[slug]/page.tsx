@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/layout/container";
+import { ProductViewTracker } from "@/components/analytics/ProductViewTracker";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { ProductActions } from "@/components/product/ProductActions";
 import { ProductReviews } from "@/components/reviews/ProductReviews";
 import { ReviewStars } from "@/components/reviews/ReviewStars";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -15,6 +17,11 @@ import {
   getProductVariants,
   sortProductVariants,
 } from "@/lib/products";
+import {
+  createPageMetadata,
+  createProductBreadcrumbStructuredData,
+  createProductStructuredData,
+} from "@/lib/seo";
 import { getCatalogProductBySlug } from "@/services/catalog-products";
 import { getApprovedProductReviews } from "@/services/reviews";
 
@@ -35,13 +42,19 @@ export async function generateMetadata({
   if (!product) {
     return {
       title: "Product not found | LA ESPERANZA",
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
-  return {
-    title: `${product.name} | LA ESPERANZA`,
-    description: product.description,
-  };
+  return createPageMetadata({
+    title: `${product.name} Inspired Perfume | LA ESPERANZA`,
+    description: `${product.name}, inspired by ${product.inspiredBy}. ${product.description}`,
+    path: `/products/${product.slug}`,
+    image: getProductImageSrc(product),
+  });
 }
 
 export default async function ProductDetailPage({
@@ -65,9 +78,17 @@ export default async function ProductDetailPage({
     product.product_variants ?? getProductVariants(product),
   );
   const reviewData = await getApprovedProductReviews(product.id);
+  const productStructuredData = createProductStructuredData(
+    product,
+    reviewData.summary,
+  );
+  const breadcrumbStructuredData =
+    createProductBreadcrumbStructuredData(product);
 
   return (
     <main className="min-h-screen">
+      <JsonLd data={[productStructuredData, breadcrumbStructuredData]} />
+      <ProductViewTracker product={product} />
       <Navbar />
       <Container className="py-12 md:py-16">
         {/* Product details include cart and wishlist actions without checkout or payment flows. */}

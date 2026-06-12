@@ -12,6 +12,8 @@ import {
   removeCartItem,
   updateCartItemQuantity,
 } from "@/lib/cart";
+import { trackAddToCart } from "@/lib/marketing";
+import { getProductVariants } from "@/lib/products";
 import type { CartItem, CartProductSize } from "@/types/cart";
 import type { Product } from "@/types/product";
 
@@ -162,16 +164,45 @@ export function useCart() {
       productOverride?: Product,
       variantId?: string,
     ) => {
-      commitItems(
-        addCartItem(
-          readCartStorage(),
-          productId,
-          size,
-          quantity,
-          productOverride ? mergeCatalogProduct(productOverride) : catalogProducts,
-          variantId,
-        ),
+      const currentItems = readCartStorage();
+      const currentQuantity =
+        currentItems.find(
+          (item) => item.productId === productId && item.size === size,
+        )?.quantity ?? 0;
+      const availableProducts = productOverride
+        ? mergeCatalogProduct(productOverride)
+        : catalogProducts;
+      const nextItems = addCartItem(
+        currentItems,
+        productId,
+        size,
+        quantity,
+        availableProducts,
+        variantId,
       );
+      const nextQuantity =
+        nextItems.find(
+          (item) => item.productId === productId && item.size === size,
+        )?.quantity ?? 0;
+      const addedQuantity = nextQuantity - currentQuantity;
+
+      commitItems(nextItems);
+
+      if (addedQuantity > 0) {
+        const product = availableProducts.find(
+          (entry) => entry.id === productId,
+        );
+        const variant = product
+          ? getProductVariants(product).find(
+              (entry) =>
+                entry.id === variantId || entry.sizeLabel === size,
+            )
+          : undefined;
+
+        if (product && variant) {
+          trackAddToCart(product, variant, addedQuantity);
+        }
+      }
     },
     [catalogProducts, commitItems, mergeCatalogProduct],
   );

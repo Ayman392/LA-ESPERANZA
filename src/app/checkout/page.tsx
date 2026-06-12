@@ -3,11 +3,15 @@ import { CheckoutForm } from "@/components/checkout/CheckoutForm";
 import { Container } from "@/components/layout/container";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Checkout | LA ESPERANZA",
-  description: "Place a local LA ESPERANZA perfume order.",
-};
+  description:
+    "Complete delivery and payment details for your LA ESPERANZA fragrance order.",
+  path: "/checkout",
+  index: false,
+});
 
 export default function Page() {
   return (

@@ -3,11 +3,14 @@ import { CartPage } from "@/components/cart/CartPage";
 import { Container } from "@/components/layout/container";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Cart | LA ESPERANZA",
-  description: "Review saved LA ESPERANZA perfume cart items.",
-};
+export const metadata: Metadata = createPageMetadata({
+  title: "Shopping Cart | LA ESPERANZA",
+  description: "Review your selected LA ESPERANZA inspired perfumes.",
+  path: "/cart",
+  index: false,
+});
 
 export default function Page() {
   return (

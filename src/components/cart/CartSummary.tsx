@@ -1,12 +1,16 @@
 import Link from "next/link";
+import { trackBeginCheckout } from "@/lib/marketing";
+import type { CartLineItem } from "@/types/cart";
 
 type CartSummaryProps = {
+  lineItems: CartLineItem[];
   subtotal: number;
   totalItems: number;
   onClearCart: () => void;
 };
 
 export function CartSummary({
+  lineItems,
   subtotal,
   totalItems,
   onClearCart,
@@ -30,6 +34,7 @@ export function CartSummary({
       <div className="mt-6 grid gap-3">
         <Link
           href="/checkout"
+          onClick={() => trackBeginCheckout(lineItems, subtotal)}
           className="btn-primary-luxury inline-flex h-11 items-center justify-center rounded-full bg-charcoal px-5 text-sm font-semibold text-white hover:bg-[#38352f] focus:outline-none focus:ring-2 focus:ring-accent/40"
         >
           Checkout

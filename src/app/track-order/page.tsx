@@ -3,12 +3,14 @@ import { Container } from "@/components/layout/container";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { OrderTracker } from "@/components/order-tracking/OrderTracker";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Track Order | LA ESPERANZA",
+export const metadata: Metadata = createPageMetadata({
+  title: "Track Your Order | LA ESPERANZA",
   description:
     "Track your LA ESPERANZA fragrance order using your order number and checkout phone number.",
-};
+  path: "/track-order",
+});
 
 export default function TrackOrderPage() {
   return (

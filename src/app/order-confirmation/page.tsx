@@ -4,11 +4,14 @@ import { OrderConfirmation } from "@/components/checkout/OrderConfirmation";
 import { Container } from "@/components/layout/container";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Order Confirmation | LA ESPERANZA",
   description: "View your saved LA ESPERANZA order confirmation.",
-};
+  path: "/order-confirmation",
+  index: false,
+});
 
 export default function Page() {
   return (

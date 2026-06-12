@@ -3,11 +3,14 @@ import { Container } from "@/components/layout/container";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { WishlistPage } from "@/components/wishlist/WishlistPage";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Wishlist | LA ESPERANZA",
-  description: "View saved LA ESPERANZA perfume favorites.",
-};
+  description: "View your saved LA ESPERANZA perfume favorites.",
+  path: "/wishlist",
+  index: false,
+});
 
 export default function Page() {
   return (
