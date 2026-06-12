@@ -8,7 +8,7 @@ import { NavStoreBadges } from "@/components/layout/nav-store-badges";
 import { navItems, siteConfig } from "@/lib/site";
 
 const textNavigation = navItems.filter((item) =>
-  ["Collection", "About", "Contact"].includes(item.label),
+  ["Collection", "About", "Contact", "Track Order"].includes(item.label),
 );
 
 // The homepage header begins as hero glass and settles into a dark campaign bar.
@@ -38,17 +38,17 @@ export function Navbar() {
           : "border-b border-white/10 bg-[#0F0F0F]/94 shadow-[0_16px_50px_rgba(0,0,0,0.2)] backdrop-blur-xl",
       ].join(" ")}
     >
-      <Container className="grid h-20 grid-cols-[1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
+      <Container className="grid h-20 grid-cols-[1fr_auto] items-center gap-2 lg:grid-cols-[1fr_auto_1fr] lg:gap-4">
         <Link
           href="/"
-          className="justify-self-start whitespace-nowrap font-[var(--font-campaign-serif)] text-xl font-semibold tracking-[0.04em] text-white transition duration-300 hover:text-[#E1C78F] sm:text-2xl"
+          className="justify-self-start whitespace-nowrap font-[var(--font-campaign-serif)] text-lg font-semibold tracking-[0.04em] text-white transition duration-300 hover:text-[#E1C78F] sm:text-2xl"
         >
           {siteConfig.name}
         </Link>
 
         <nav
           aria-label="Primary navigation"
-          className="hidden items-center gap-9 lg:flex"
+          className="hidden items-center gap-7 lg:flex xl:gap-9"
         >
           {textNavigation.map((item) => (
             <Link
@@ -62,6 +62,13 @@ export function Navbar() {
         </nav>
 
         <div className="flex min-w-0 items-center justify-self-end gap-1.5 sm:gap-2">
+          <Link
+            href="/track-order"
+            className="nav-link-luxury text-[10px] font-semibold uppercase tracking-[0.08em] text-white/80 hover:text-[#E1C78F] sm:mr-1 sm:text-xs sm:tracking-[0.12em] lg:hidden"
+          >
+            <span className="sm:hidden">Track</span>
+            <span className="hidden sm:inline">Track Order</span>
+          </Link>
           <NavStoreBadges />
         </div>
       </Container>

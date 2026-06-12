@@ -12,6 +12,7 @@ export const navItems: NavItem[] = [
   { label: "Collection", href: "/#signature-collection" },
   { label: "About", href: "/#art-of-inspiration" },
   { label: "Contact", href: "/#contact" },
+  { label: "Track Order", href: "/track-order" },
 ];
 
 export const footerLinks: NavItem[] = [
