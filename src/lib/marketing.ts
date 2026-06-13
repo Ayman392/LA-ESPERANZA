@@ -31,6 +31,8 @@ declare global {
 const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 let inMemoryConsent: MarketingConsent | null = null;
+let initializedMetaPixelId: string | null = null;
+let lastTrackedPage: string | null = null;
 
 export const hasMarketingConfiguration = Boolean(
   gaMeasurementId || metaPixelId,
@@ -66,6 +68,8 @@ export const setMarketingConsent = (consent: MarketingConsent) => {
       detail: consent,
     }),
   );
+
+  console.info("[LA ESPERANZA] Consent Status:", consent);
 };
 
 export const subscribeToMarketingConsent = (onStoreChange: () => void) => {
@@ -128,11 +132,13 @@ const sendMetaEvent = (
   parameters: Record<string, unknown>,
 ) => {
   if (!metaPixelId || !canTrack()) {
-    return;
+    return false;
   }
 
   ensureMetaPixelQueue();
   window.fbq?.("track", eventName, parameters);
+
+  return true;
 };
 
 const toAnalyticsItem = (
@@ -150,7 +156,13 @@ const toAnalyticsItem = (
 });
 
 export const initializeMarketingPlatforms = () => {
-  if (!canTrack()) {
+  const consent = getMarketingConsent();
+
+  console.info("[LA ESPERANZA] Pixel ID:", metaPixelId ?? "missing");
+  console.info("[LA ESPERANZA] Consent Status:", consent);
+
+  if (consent !== "accepted") {
+    console.info("[LA ESPERANZA] Pixel Initialized:", false);
     return;
   }
 
@@ -163,10 +175,16 @@ export const initializeMarketingPlatforms = () => {
     });
   }
 
-  if (metaPixelId) {
+  if (metaPixelId && initializedMetaPixelId !== metaPixelId) {
     ensureMetaPixelQueue();
     window.fbq?.("init", metaPixelId);
+    initializedMetaPixelId = metaPixelId;
   }
+
+  console.info(
+    "[LA ESPERANZA] Pixel Initialized:",
+    initializedMetaPixelId === metaPixelId,
+  );
 };
 
 export const trackPageView = () => {
@@ -174,12 +192,33 @@ export const trackPageView = () => {
     return;
   }
 
+  const page = `${window.location.pathname}${window.location.search}`;
+
+  if (lastTrackedPage === page) {
+    return;
+  }
+
   sendGoogleEvent("page_view", {
     page_title: document.title,
     page_location: window.location.href,
-    page_path: `${window.location.pathname}${window.location.search}`,
+    page_path: page,
   });
-  sendMetaEvent("PageView", {});
+
+  if (sendMetaEvent("PageView", {})) {
+    lastTrackedPage = page;
+    console.info("[LA ESPERANZA] PageView fired:", page);
+  }
+};
+
+export const reportMetaPixelScriptState = (
+  status: "loaded" | "error",
+) => {
+  console.info("[LA ESPERANZA] fbq state:", {
+    status,
+    available: typeof window.fbq === "function",
+    initialized: initializedMetaPixelId === metaPixelId,
+    queueLength: window.fbq?.queue?.length ?? 0,
+  });
 };
 
 export const trackProductView = (

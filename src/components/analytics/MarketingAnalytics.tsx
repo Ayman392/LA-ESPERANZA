@@ -8,6 +8,7 @@ import {
   getServerMarketingConsent,
   hasMarketingConfiguration,
   initializeMarketingPlatforms,
+  reportMetaPixelScriptState,
   setMarketingConsent,
   subscribeToMarketingConsent,
   trackPageView,
@@ -42,7 +43,9 @@ function MarketingScripts() {
         <Script
           id="la-esperanza-meta-pixel"
           src="https://connect.facebook.net/en_US/fbevents.js"
-          strategy="lazyOnload"
+          strategy="afterInteractive"
+          onLoad={() => reportMetaPixelScriptState("loaded")}
+          onError={() => reportMetaPixelScriptState("error")}
         />
       ) : null}
     </>
