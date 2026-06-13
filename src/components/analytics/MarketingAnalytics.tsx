@@ -58,6 +58,14 @@ export function MarketingAnalytics() {
   );
   const isAdminRoute = pathname.startsWith("/admin");
 
+  useEffect(() => {
+    if (!metaPixelId && !isAdminRoute) {
+      console.warn(
+        "[LA ESPERANZA] NEXT_PUBLIC_META_PIXEL_ID is missing. Meta Pixel tracking is disabled.",
+      );
+    }
+  }, [isAdminRoute]);
+
   if (!hasMarketingConfiguration || isAdminRoute) {
     return null;
   }
