@@ -113,6 +113,7 @@ export default function RootLayout({
       <body>
         <JsonLd data={[organizationStructuredData, websiteStructuredData]} />
         {children}
+        {/* Global consent-gated GA and Meta Pixel base code. */}
         <MarketingAnalytics />
       </body>
     </html>

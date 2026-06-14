@@ -13,6 +13,12 @@ type Gtag = (...args: unknown[]) => void;
 
 type MetaPixel = ((...args: unknown[]) => void) & {
   callMethod?: (...args: unknown[]) => void;
+  getState?: () => {
+    pixels?: Array<{
+      id: string;
+      eventCount?: number;
+    }>;
+  };
   push: MetaPixel;
   queue: unknown[][];
   loaded: boolean;
@@ -29,13 +35,15 @@ declare global {
 }
 
 const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+const configuredMetaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim();
+export const META_PIXEL_ID =
+  configuredMetaPixelId || "1702835577585306";
+export const hasConfiguredMetaPixelId = Boolean(configuredMetaPixelId);
 let inMemoryConsent: MarketingConsent | null = null;
-let initializedMetaPixelId: string | null = null;
 let lastTrackedPage: string | null = null;
 
 export const hasMarketingConfiguration = Boolean(
-  gaMeasurementId || metaPixelId,
+  gaMeasurementId || META_PIXEL_ID,
 );
 
 export const getMarketingConsent = (): MarketingConsent | null => {
@@ -131,7 +139,7 @@ const sendMetaEvent = (
   eventName: string,
   parameters: Record<string, unknown>,
 ) => {
-  if (!metaPixelId || !canTrack()) {
+  if (!META_PIXEL_ID || !canTrack()) {
     return false;
   }
 
@@ -158,7 +166,7 @@ const toAnalyticsItem = (
 export const initializeMarketingPlatforms = () => {
   const consent = getMarketingConsent();
 
-  console.info("[LA ESPERANZA] Pixel ID:", metaPixelId ?? "missing");
+  console.info("[LA ESPERANZA] Pixel ID:", META_PIXEL_ID);
   console.info("[LA ESPERANZA] Consent Status:", consent);
 
   if (consent !== "accepted") {
@@ -175,16 +183,7 @@ export const initializeMarketingPlatforms = () => {
     });
   }
 
-  if (metaPixelId && initializedMetaPixelId !== metaPixelId) {
-    ensureMetaPixelQueue();
-    window.fbq?.("init", metaPixelId);
-    initializedMetaPixelId = metaPixelId;
-  }
-
-  console.info(
-    "[LA ESPERANZA] Pixel Initialized:",
-    initializedMetaPixelId === metaPixelId,
-  );
+  console.info("[LA ESPERANZA] Pixel Initialized:", isMetaPixelInitialized());
 };
 
 export const trackPageView = () => {
@@ -213,12 +212,27 @@ export const trackPageView = () => {
 export const reportMetaPixelScriptState = (
   status: "loaded" | "error",
 ) => {
+  const initialized = isMetaPixelInitialized();
+
+  console.info("[LA ESPERANZA] Pixel Initialized:", initialized);
   console.info("[LA ESPERANZA] fbq state:", {
     status,
     available: typeof window.fbq === "function",
-    initialized: initializedMetaPixelId === metaPixelId,
+    initialized,
     queueLength: window.fbq?.queue?.length ?? 0,
   });
+};
+
+const isMetaPixelInitialized = () => {
+  const pixels = window.fbq?.getState?.().pixels ?? [];
+
+  if (pixels.some((pixel) => pixel.id === META_PIXEL_ID)) {
+    return true;
+  }
+
+  return window.fbq?.queue?.some(
+    (entry) => entry[0] === "init" && entry[1] === META_PIXEL_ID,
+  ) ?? false;
 };
 
 export const trackProductView = (

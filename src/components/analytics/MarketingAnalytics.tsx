@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 import {
   getMarketingConsent,
   getServerMarketingConsent,
+  hasConfiguredMetaPixelId,
   hasMarketingConfiguration,
   initializeMarketingPlatforms,
+  META_PIXEL_ID,
   reportMetaPixelScriptState,
   setMarketingConsent,
   subscribeToMarketingConsent,
@@ -15,16 +17,33 @@ import {
 } from "@/lib/marketing";
 
 const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+const metaPixelBaseCode = `
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', ${JSON.stringify(META_PIXEL_ID)});
+  fbq('track', 'PageView');
+`;
 
 function MarketingScripts() {
   const pathname = usePathname();
+  const isInitialPage = useRef(true);
 
   useEffect(() => {
     initializeMarketingPlatforms();
   }, []);
 
   useEffect(() => {
+    if (isInitialPage.current) {
+      isInitialPage.current = false;
+      return;
+    }
+
     trackPageView();
   }, [pathname]);
 
@@ -39,15 +58,25 @@ function MarketingScripts() {
           strategy="lazyOnload"
         />
       ) : null}
-      {metaPixelId ? (
-        <Script
-          id="la-esperanza-meta-pixel"
-          src="https://connect.facebook.net/en_US/fbevents.js"
-          strategy="afterInteractive"
-          onLoad={() => reportMetaPixelScriptState("loaded")}
-          onError={() => reportMetaPixelScriptState("error")}
+      <Script
+        id="la-esperanza-meta-pixel-base"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{ __html: metaPixelBaseCode }}
+        onReady={() => reportMetaPixelScriptState("loaded")}
+        onError={() => reportMetaPixelScriptState("error")}
+      />
+      <noscript>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          alt=""
+          height="1"
+          width="1"
+          style={{ display: "none" }}
+          src={`https://www.facebook.com/tr?id=${encodeURIComponent(
+            META_PIXEL_ID,
+          )}&ev=PageView&noscript=1`}
         />
-      ) : null}
+      </noscript>
     </>
   );
 }
@@ -62,9 +91,13 @@ export function MarketingAnalytics() {
   const isAdminRoute = pathname.startsWith("/admin");
 
   useEffect(() => {
-    if (!metaPixelId && !isAdminRoute) {
+    if (
+      process.env.NODE_ENV === "development" &&
+      !hasConfiguredMetaPixelId &&
+      !isAdminRoute
+    ) {
       console.warn(
-        "[LA ESPERANZA] NEXT_PUBLIC_META_PIXEL_ID is missing. Meta Pixel tracking is disabled.",
+        `[LA ESPERANZA] NEXT_PUBLIC_META_PIXEL_ID is missing. Using fallback Pixel ID ${META_PIXEL_ID}.`,
       );
     }
   }, [isAdminRoute]);
