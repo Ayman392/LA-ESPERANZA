@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, CreditCard, Truck } from "lucide-react";
 import { motion } from "framer-motion";
 import { CheckoutOrderSummary } from "@/components/checkout/CheckoutOrderSummary";
@@ -17,7 +17,7 @@ import {
   persistOrder,
   validateCheckoutForm,
 } from "@/lib/orders";
-import { trackPurchase } from "@/lib/marketing";
+import { trackBeginCheckout, trackPurchase } from "@/lib/marketing";
 import type {
   CheckoutFormErrors,
   CheckoutFormValues,
@@ -49,6 +49,7 @@ const ErrorText = ({ message }: { message?: string }) =>
 export function CheckoutForm() {
   const router = useRouter();
   const { lineItems, subtotal, isReady, clearCart } = useCart();
+  const hasTrackedCheckout = useRef(false);
   const [values, setValues] = useState<CheckoutFormValues>(emptyCheckoutForm);
   const [errors, setErrors] = useState<CheckoutFormErrors>({});
   const [submissionError, setSubmissionError] = useState("");
@@ -60,6 +61,15 @@ export function CheckoutForm() {
   const manualPaymentNumber = isManualPayment(values.paymentMethod)
     ? manualPaymentNumbers[values.paymentMethod]
     : null;
+
+  useEffect(() => {
+    if (!isReady || !hasCartItems || hasTrackedCheckout.current) {
+      return;
+    }
+
+    hasTrackedCheckout.current = true;
+    trackBeginCheckout(lineItems, subtotal);
+  }, [hasCartItems, isReady, lineItems, subtotal]);
 
   const updateValue = <Key extends keyof CheckoutFormValues>(
     key: Key,
