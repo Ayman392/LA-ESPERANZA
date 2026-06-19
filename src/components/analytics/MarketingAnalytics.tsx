@@ -28,8 +28,15 @@ const metaPixelBaseCode = `
   'https://connect.facebook.net/en_US/fbevents.js');
   fbq('init', ${JSON.stringify(META_PIXEL_ID)});
   console.log('Meta Pixel initialized');
-  fbq('track', 'PageView');
-  console.log('PageView sent');
+  window.__laEsperanzaMetaPageViews = window.__laEsperanzaMetaPageViews || [];
+  if (typeof window !== "undefined" && window.fbq) {
+    var page = window.location.pathname + window.location.search;
+    window.fbq("track", "PageView");
+    if (window.__laEsperanzaMetaPageViews.indexOf(page) === -1) {
+      window.__laEsperanzaMetaPageViews.push(page);
+    }
+    console.log('Meta PageView sent');
+  }
 `;
 
 function MarketingScripts() {

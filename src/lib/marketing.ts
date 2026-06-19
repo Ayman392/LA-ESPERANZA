@@ -31,6 +31,7 @@ declare global {
     gtag?: Gtag;
     fbq?: MetaPixel;
     _fbq?: MetaPixel;
+    __laEsperanzaMetaPageViews?: string[];
   }
 }
 
@@ -123,6 +124,20 @@ export const ensureMetaPixelQueue = () => {
 
 const canTrack = () => getMarketingConsent() === "accepted";
 
+const getCurrentPagePath = () =>
+  `${window.location.pathname}${window.location.search}`;
+
+const hasTrackedMetaPageView = (page: string) =>
+  window.__laEsperanzaMetaPageViews?.includes(page) ?? false;
+
+const rememberMetaPageView = (page: string) => {
+  window.__laEsperanzaMetaPageViews ??= [];
+
+  if (!window.__laEsperanzaMetaPageViews.includes(page)) {
+    window.__laEsperanzaMetaPageViews.push(page);
+  }
+};
+
 const sendGoogleEvent = (
   eventName: string,
   parameters: Record<string, unknown>,
@@ -139,12 +154,16 @@ const sendMetaEvent = (
   eventName: string,
   parameters: Record<string, unknown>,
 ) => {
-  if (!META_PIXEL_ID || !canTrack()) {
+  if (
+    typeof window === "undefined" ||
+    !META_PIXEL_ID ||
+    !canTrack() ||
+    !window.fbq
+  ) {
     return false;
   }
 
-  ensureMetaPixelQueue();
-  window.fbq?.("track", eventName, parameters);
+  window.fbq("track", eventName, parameters);
 
   return true;
 };
@@ -192,9 +211,9 @@ export const trackPageView = () => {
     return;
   }
 
-  const page = `${window.location.pathname}${window.location.search}`;
+  const page = getCurrentPagePath();
 
-  if (lastTrackedPage === page) {
+  if (lastTrackedPage === page || hasTrackedMetaPageView(page)) {
     return;
   }
 
@@ -206,8 +225,9 @@ export const trackPageView = () => {
 
   if (sendMetaEvent("PageView", {})) {
     lastTrackedPage = page;
+    rememberMetaPageView(page);
     console.log("[LA ESPERANZA] PageView fired:", page);
-    console.log("PageView sent");
+    console.log("Meta PageView sent");
   }
 };
 
