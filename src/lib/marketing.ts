@@ -77,7 +77,7 @@ export const setMarketingConsent = (consent: MarketingConsent) => {
     }),
   );
 
-  console.info("[LA ESPERANZA] Consent Status:", consent);
+  console.log("[LA ESPERANZA] Consent Status:", consent);
 };
 
 export const subscribeToMarketingConsent = (onStoreChange: () => void) => {
@@ -166,11 +166,11 @@ const toAnalyticsItem = (
 export const initializeMarketingPlatforms = () => {
   const consent = getMarketingConsent();
 
-  console.info("[LA ESPERANZA] Pixel ID:", META_PIXEL_ID);
-  console.info("[LA ESPERANZA] Consent Status:", consent);
+  console.log("[LA ESPERANZA] Pixel ID:", META_PIXEL_ID);
+  console.log("[LA ESPERANZA] Consent Status:", consent);
 
   if (consent !== "accepted") {
-    console.info("[LA ESPERANZA] Pixel Initialized:", false);
+    console.log("[LA ESPERANZA] Pixel Initialized:", false);
     return;
   }
 
@@ -183,7 +183,8 @@ export const initializeMarketingPlatforms = () => {
     });
   }
 
-  console.info("[LA ESPERANZA] Pixel Initialized:", isMetaPixelInitialized());
+  console.log("[LA ESPERANZA] Pixel Initialized:", isMetaPixelInitialized());
+  console.log("Meta Pixel initialized");
 };
 
 export const trackPageView = () => {
@@ -205,7 +206,8 @@ export const trackPageView = () => {
 
   if (sendMetaEvent("PageView", {})) {
     lastTrackedPage = page;
-    console.info("[LA ESPERANZA] PageView fired:", page);
+    console.log("[LA ESPERANZA] PageView fired:", page);
+    console.log("PageView sent");
   }
 };
 
@@ -214,8 +216,8 @@ export const reportMetaPixelScriptState = (
 ) => {
   const initialized = isMetaPixelInitialized();
 
-  console.info("[LA ESPERANZA] Pixel Initialized:", initialized);
-  console.info("[LA ESPERANZA] fbq state:", {
+  console.log("[LA ESPERANZA] Pixel Initialized:", initialized);
+  console.log("[LA ESPERANZA] fbq state:", {
     status,
     available: typeof window.fbq === "function",
     initialized,

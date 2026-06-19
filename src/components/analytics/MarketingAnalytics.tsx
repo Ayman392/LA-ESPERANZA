@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import Script from "next/script";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   getMarketingConsent,
   getServerMarketingConsent,
@@ -27,12 +27,16 @@ const metaPixelBaseCode = `
   s.parentNode.insertBefore(t,s)}(window, document,'script',
   'https://connect.facebook.net/en_US/fbevents.js');
   fbq('init', ${JSON.stringify(META_PIXEL_ID)});
+  console.log('Meta Pixel initialized');
   fbq('track', 'PageView');
+  console.log('PageView sent');
 `;
 
 function MarketingScripts() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isInitialPage = useRef(true);
+  const routeKey = `${pathname}?${searchParams.toString()}`;
 
   useEffect(() => {
     initializeMarketingPlatforms();
@@ -45,7 +49,7 @@ function MarketingScripts() {
     }
 
     trackPageView();
-  }, [pathname]);
+  }, [routeKey]);
 
   return (
     <>
